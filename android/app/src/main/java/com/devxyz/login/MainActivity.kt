@@ -149,37 +149,6 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var newWorkspaceName by remember { mutableStateOf("") }
 
-    /**
-     * Single write path for the store. On local (non-sync) writes, any
-     * profile that already lives on the server and whose content changed
-     * (ignoring per-device run status / timestamps) is marked dirty so
-     * the next sync PATCHes it — this one rule covers edits from the
-     * editor, quick settings, delete and restore alike. After a local
-     * write with sync work pending, a best-effort sync is scheduled.
-     */
-    fun updateStore(next: Store, fromSync: Boolean = false) {
-        val previous = store
-        var adjusted = next
-        if (!fromSync) {
-            val oldById = previous.profiles.associateBy { it.id }
-            adjusted = next.copy(profiles = next.profiles.map { p ->
-                val old = oldById[p.id]
-                if (old != null && p.serverId != null && !p.dirty &&
-                    old.copy(status = p.status, dirty = p.dirty, updatedAt = p.updatedAt) != p
-                ) p.copy(dirty = true) else p
-            })
-        }
-        store = adjusted
-        profileStore.save(adjusted)
-        if (!fromSync && session != null) {
-            val hasWork = adjusted.profiles.any {
-                it.dirty ||
-                    (it.serverId == null && it.deletedAt == null) ||
-                    (it.deletedAt != null && it.serverId != null)
-            } || adjusted.folders != previous.folders
-            if (hasWork) runSync()
-        }
-    }
 
     /**
      * Runs one sync pass (SyncEngine owns the merge rules). Best-effort:
@@ -251,6 +220,38 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
                 syncAgain = false
                 runSync()
             }
+        }
+    }
+
+    /**
+     * Single write path for the store. On local (non-sync) writes, any
+     * profile that already lives on the server and whose content changed
+     * (ignoring per-device run status / timestamps) is marked dirty so
+     * the next sync PATCHes it — this one rule covers edits from the
+     * editor, quick settings, delete and restore alike. After a local
+     * write with sync work pending, a best-effort sync is scheduled.
+     */
+    fun updateStore(next: Store, fromSync: Boolean = false) {
+        val previous = store
+        var adjusted = next
+        if (!fromSync) {
+            val oldById = previous.profiles.associateBy { it.id }
+            adjusted = next.copy(profiles = next.profiles.map { p ->
+                val old = oldById[p.id]
+                if (old != null && p.serverId != null && !p.dirty &&
+                    old.copy(status = p.status, dirty = p.dirty, updatedAt = p.updatedAt) != p
+                ) p.copy(dirty = true) else p
+            })
+        }
+        store = adjusted
+        profileStore.save(adjusted)
+        if (!fromSync && session != null) {
+            val hasWork = adjusted.profiles.any {
+                it.dirty ||
+                    (it.serverId == null && it.deletedAt == null) ||
+                    (it.deletedAt != null && it.serverId != null)
+            } || adjusted.folders != previous.folders
+            if (hasWork) runSync()
         }
     }
 
