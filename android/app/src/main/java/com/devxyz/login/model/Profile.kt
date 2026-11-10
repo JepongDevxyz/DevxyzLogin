@@ -28,13 +28,18 @@ data class MediaDevices(
 
 @Serializable
 data class HardwareInfo(
-    /** "off" | "block" | "noise" */
-    val canvasMode: String = "noise",
+    /** "off" | "block" | "noise" — GoLogin editor default is Off (capture §4.7) */
+    val canvasMode: String = "off",
     val webglVendor: String = "",
     val webglRenderer: String = "",
-    val webglNoise: Boolean = true,
+    /** WebGL Image noise — GoLogin editor default Off */
+    val webglNoise: Boolean = false,
+    /** Audio Context noise — GoLogin editor default Noise */
     val audioNoise: Boolean = true,
-    val clientRectsNoise: Boolean = true
+    /** Client Rects noise — GoLogin editor default Off */
+    val clientRectsNoise: Boolean = false,
+    /** WebGL Metadata: true = "Mask", false = "Real" (GoLogin default Mask) */
+    val webglMetadataMask: Boolean = true
 )
 
 @Serializable
@@ -82,6 +87,31 @@ data class ProxyConfig(
         else "${type.uppercase()} • $host:$port"
 }
 
+/**
+ * Browser behaviour options (GoLogin Advanced → Storage / Other sections,
+ * capture §4.7). Additive in v2 — defaults match the GoLogin new-profile
+ * editor so v1 store.json files load unchanged.
+ */
+@Serializable
+data class BrowserOptions(
+    /** "newTab" | "previouslyOpened" | "specified" */
+    val startUrl: String = "previouslyOpened",
+    val startPages: List<String> = emptyList(),
+    val customDns: String = "",
+    val launchArguments: String = "",
+    val googleServices: Boolean = true,
+    val disableImageLoading: Boolean = false,
+    val disableVideoAutoplay: Boolean = false,
+    val saveBookmarks: Boolean = true,
+    val saveHistory: Boolean = true,
+    val savePasswords: Boolean = true,
+    val localStorage: Boolean = true,
+    val extensionStorage: Boolean = true,
+    val indexedDb: Boolean = true,
+    val vulnerablePlugins: Boolean = true,
+    val systemExtensions: Boolean = false
+)
+
 @Serializable
 data class Profile(
     val id: String,
@@ -98,6 +128,10 @@ data class Profile(
     val extensions: List<String> = emptyList(),
     /** Raw lines: "folder::name::url" | "name::url" | "url" */
     val bookmarks: List<String> = emptyList(),
+    /** v2 (additive): browser behaviour options — see [BrowserOptions]. */
+    val browser: BrowserOptions = BrowserOptions(),
+    /** v2 (additive): imported cookies, raw text as pasted (Cookies tab parity). */
+    val cookies: String = "",
     val createdAt: String = "",
     val updatedAt: String = "",
     val deletedAt: String? = null
@@ -132,13 +166,13 @@ data class Store(
     val members: List<String> = emptyList()
 )
 
-/** OS options shown in the Overview picker (GoLogin parity). */
+/** OS options shown in the Overview picker — exact GoLogin labels and order (capture §4.1). */
 object OsOptions {
     val all: List<Pair<String, String>> = listOf(
         "windows10" to "Windows 10",
         "windows11" to "Windows 11",
-        "macIntel" to "Mac (Intel)",
-        "macArm" to "Mac (ARM)",
+        "macIntel" to "Mac Intel",
+        "macArm" to "Mac ARM",
         "linux" to "Linux",
         "android" to "Android"
     )

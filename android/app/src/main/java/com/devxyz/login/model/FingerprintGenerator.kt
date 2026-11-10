@@ -10,7 +10,8 @@ import kotlin.random.Random
  */
 object FingerprintGenerator {
 
-    private val chromeVersions = listOf("126.0.6478.127", "128.0.6613.120", "130.0.6723.92", "131.0.6778.140")
+    // GoLogin capture: current Orbita stable is Chrome 156 (UA build 156.0.8078.47).
+    private val chromeVersions = listOf("156.0.8078.47", "154.0.6998.35", "152.0.6808.112")
 
     private val languagePools = listOf(
         listOf("en-US", "en"),
@@ -26,7 +27,8 @@ object FingerprintGenerator {
         val rnd = Random(seed)
         val version = chromeVersions[rnd.nextInt(chromeVersions.size)]
         val languages = languagePools[rnd.nextInt(languagePools.size)]
-        val cpu = listOf(4, 6, 8, 8, 12, 16)[rnd.nextInt(6)]
+        // Capture option lists: CPU 2,4,6,8,10,12,16,20,24,32 — RAM 1,2,4,6,8,16,32
+        val cpu = listOf(4, 6, 8, 8, 10, 12, 16)[rnd.nextInt(7)]
         val ram = listOf(4, 8, 8, 16, 32)[rnd.nextInt(5)]
 
         val nav: NavigatorInfo
@@ -37,7 +39,7 @@ object FingerprintGenerator {
                 nav = NavigatorInfo(
                     userAgent = "Mozilla/5.0 ($win) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$version Safari/537.36",
                     browserVersion = version,
-                    screenResolution = listOf("1920x1080", "1366x768", "1536x864", "2560x1440")[rnd.nextInt(4)],
+                    screenResolution = listOf("1920x1080", "1280x720", "1536x864", "2560x1440")[rnd.nextInt(4)],
                     languages = languages, platform = "Win32", cpuCores = cpu, ram = ram
                 )
                 hw = windowsWebGl(rnd)
@@ -46,7 +48,7 @@ object FingerprintGenerator {
                 nav = NavigatorInfo(
                     userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$version Safari/537.36",
                     browserVersion = version,
-                    screenResolution = listOf("1440x900", "1680x1050", "2560x1600", "1512x982")[rnd.nextInt(4)],
+                    screenResolution = listOf("1680x1050", "2560x1600", "1512x982", "2880x1800")[rnd.nextInt(4)],
                     languages = languages, platform = "MacIntel", cpuCores = cpu, ram = ram
                 )
                 hw = HardwareInfo(
@@ -61,8 +63,9 @@ object FingerprintGenerator {
                 nav = NavigatorInfo(
                     userAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$version Safari/537.36",
                     browserVersion = version,
-                    screenResolution = listOf("1920x1080", "1366x768", "2560x1440")[rnd.nextInt(3)],
-                    languages = languages, platform = "Linux x86_64", cpuCores = cpu, ram = ram
+                    screenResolution = listOf("1920x1080", "1536x864", "2560x1440")[rnd.nextInt(3)],
+                    // Capture: generated platform for Linux profiles reads "Linux armv81"
+                    languages = languages, platform = "Linux armv81", cpuCores = cpu, ram = ram
                 )
                 hw = windowsWebGl(rnd)
             }

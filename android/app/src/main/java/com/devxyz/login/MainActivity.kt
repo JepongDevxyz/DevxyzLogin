@@ -5,10 +5,14 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Folder
@@ -47,10 +51,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.devxyz.login.browser.BrowserActivityBase
 import com.devxyz.login.data.ProfileStore
+import com.devxyz.login.model.DefaultBookmarks
+import com.devxyz.login.model.DefaultProfileSettings
 import com.devxyz.login.model.FingerprintGenerator
 import com.devxyz.login.model.Profile
 import com.devxyz.login.model.Store
 import com.devxyz.login.model.Workspace
+import com.devxyz.login.ui.DevxyzTheme
 import com.devxyz.login.ui.FoldersScreen
 import com.devxyz.login.ui.ProfileEditScreen
 import com.devxyz.login.ui.ProfileListScreen
@@ -59,6 +66,9 @@ import com.devxyz.login.ui.SettingsHubScreen
 import com.devxyz.login.ui.SettingsSectionScreen
 import com.devxyz.login.ui.SupportScreen
 import kotlinx.coroutines.launch
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 sealed class Screen {
     data object List : Screen()
@@ -76,9 +86,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val profileStore = ProfileStore(this)
         setContent {
-            MaterialTheme {
-                DevxyzLoginApp(profileStore, this)
-            }
+            DevxyzLoginApp(profileStore, this)
         }
     }
 }
@@ -91,8 +99,21 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
 
     val prefs = remember { context.getSharedPreferences("devxyz_prefs", Context.MODE_PRIVATE) }
     var accountEmail by remember { mutableStateOf(prefs.getString("email", "user@devxyzlogin.local") ?: "") }
-    var plan by remember { mutableStateOf(prefs.getString("plan", "Forever Free") ?: "Forever Free") }
-    var twoFa by remember { mutableStateOf(prefs.getBoolean("twofa", false)) }
+    var plan by remember { mutableStateOf(prefs.getString("plan", "Free") ?: "Free") }
+    var themeMode by remember { mutableStateOf(prefs.getString("theme", "system") ?: "system") }
+    var uiLanguage by remember { mutableStateOf(prefs.getString("ui_language", "en") ?: "en") }
+    var defaults by remember {
+        mutableStateOf(
+            try {
+                Json { ignoreUnknownKeys = true }
+                    .decodeFromString<DefaultProfileSettings>(
+                        prefs.getString("default_settings", "") ?: ""
+                    )
+            } catch (e: Exception) {
+                DefaultProfileSettings()
+            }
+        )
+    }
     var sessions by remember {
         mutableStateOf(
             (prefs.getString("sessions", "This device • Android • active now") ?: "")
@@ -118,21 +139,26 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
 
     fun newProfile(): Profile {
         val now = ProfileStore.nowIso()
+        // GoLogin editor parity (capture §4): name auto-increments
+        // "profile N", OS default is Linux, bookmarks start from the
+        // editor-variant default list.
+        val nextNumber = store.profiles.count { it.deletedAt == null } + 1
         return Profile(
             id = ProfileStore.newId(),
-            name = "New profile",
-            os = "android",
-            fingerprint = FingerprintGenerator.generate("android"),
+            name = "profile $nextNumber",
+            os = "linux",
+            fingerprint = FingerprintGenerator.generate("linux"),
+            bookmarks = DefaultBookmarks.editorLines,
             createdAt = now, updatedAt = now
         )
     }
 
-    fun runProfile(profile: Profile) {
+    fun runProfile(profile: Profile, apiMode: Boolean = false) {
         updateStore(store.copy(profiles = store.profiles.map {
             if (it.id == profile.id) it.copy(status = "running", updatedAt = ProfileStore.nowIso()) else it
         }))
         val slot = profileStore.slotFor(profile.id)
-        context.startActivity(BrowserActivityBase.intentFor(context, slot, profile.id))
+        context.startActivity(BrowserActivityBase.intentFor(context, slot, profile.id, apiMode))
     }
 
     fun stopProfile(profile: Profile) {
@@ -142,18 +168,44 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
         BrowserActivityBase.stopSlot(context, profileStore.slotFor(profile.id))
     }
 
+    DevxyzTheme(themeMode = themeMode) {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
-                // Account header (burger menu, GoLogin Android parity)
+                // Account header: green square avatar + workspace name
+                // (GoLogin workspace-switcher parity, capture §7)
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Icon(Icons.Filled.Person, contentDescription = null)
-                    Spacer(Modifier.height(6.dp))
-                    Text(accountEmail.ifBlank { "Not signed in" }, style = MaterialTheme.typography.titleSmall)
-                    Text("Plan: $plan", style = MaterialTheme.typography.bodySmall)
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(9.dp))
+                                .background(com.devxyz.login.ui.BrandTeal),
+                            contentAlignment = androidx.compose.ui.Alignment.Center
+                        ) {
+                            Text(
+                                (store.workspaces.firstOrNull()?.name ?: "D")
+                                    .firstOrNull()?.uppercase() ?: "D",
+                                color = androidx.compose.ui.graphics.Color.White,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                        Spacer(Modifier.padding(6.dp))
+                        Column {
+                            Text(
+                                store.workspaces.firstOrNull()?.name ?: "My workspace",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            Text(
+                                accountEmail.ifBlank { "Not signed in" },
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
                     Text(
-                        "Profiles: ${store.profiles.count { it.deletedAt == null }}",
+                        "$plan · ${store.profiles.count { it.deletedAt == null }} profiles",
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -249,8 +301,13 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
                     is Screen.List -> ProfileListScreen(
                         profiles = store.profiles,
                         folders = store.folders,
-                        onRun = { runProfile(it) },
+                        onRunMode = { p, api -> runProfile(p, api) },
                         onStop = { stopProfile(it) },
+                        onUpdate = { updated ->
+                            updateStore(store.copy(profiles = store.profiles.map {
+                                if (it.id == updated.id) updated else it
+                            }))
+                        },
                         onEdit = { navigate(Screen.Edit(it, isNew = false)) },
                         onClone = { p ->
                             val now = ProfileStore.nowIso()
@@ -308,8 +365,10 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
                         store = store,
                         accountEmail = accountEmail,
                         plan = plan,
-                        twoFaEnabled = twoFa,
                         sessions = sessions,
+                        themeMode = themeMode,
+                        uiLanguage = uiLanguage,
+                        defaults = defaults,
                         onStoreChange = { updateStore(it) },
                         onEmailChange = {
                             accountEmail = it
@@ -320,13 +379,24 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
                             prefs.edit().putString("plan", it).apply()
                             Toast.makeText(context, "Plan changed to $it (local, no payment taken)", Toast.LENGTH_SHORT).show()
                         },
-                        onTwoFaChange = {
-                            twoFa = it
-                            prefs.edit().putBoolean("twofa", it).apply()
-                        },
                         onSessionsChange = {
                             sessions = it
                             prefs.edit().putString("sessions", it.joinToString("\n")).apply()
+                        },
+                        onThemeChange = {
+                            themeMode = it
+                            prefs.edit().putString("theme", it).apply()
+                        },
+                        onLanguageChange = {
+                            uiLanguage = it
+                            prefs.edit().putString("ui_language", it).apply()
+                        },
+                        onDefaultsChange = {
+                            defaults = it
+                            prefs.edit().putString(
+                                "default_settings",
+                                Json { ignoreUnknownKeys = true }.encodeToString(it)
+                            ).apply()
                         },
                         onBack = { screen = Screen.SettingsHub }
                     )
@@ -379,5 +449,6 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
             },
             dismissButton = { TextButton(onClick = { showLogoutConfirm = false }) { Text("Cancel") } }
         )
+    }
     }
 }

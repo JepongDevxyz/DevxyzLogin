@@ -1,0 +1,1 @@
+{"description":"DevxyzLogin backend — accounts, cloud profile sync, folders, proxies with a real checker, and API tokens. Zero external dependencies.","engines":{"node":">=18"},"main":"server.js","name":"devxyzlogin-server","private":true,"scripts":{"start":"node server.js","test":"bash test.sh"},"version":"1.0.0"}
