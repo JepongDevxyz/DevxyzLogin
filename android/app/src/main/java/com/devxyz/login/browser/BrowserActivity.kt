@@ -163,7 +163,7 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
 
     private val tabs = mutableStateListOf<BrowserTab>()
     private var activeTabId by mutableStateOf(0)
-    private var progress by mutableStateOf(0)
+    private var loadProgress by mutableStateOf(0)
     private var proxyReady by mutableStateOf(false)
     private val historyEntries = mutableStateListOf<HistoryEntry>()
     private var containerRef: FrameLayout? = null
@@ -268,7 +268,7 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
 
     private fun switchTab(tab: BrowserTab) {
         activeTabId = tab.id
-        progress = 0
+        loadProgress = 0
         syncContainer()
     }
 
@@ -329,7 +329,7 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
         }
         wv.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                if (tab.id == activeTabId) progress = newProgress
+                if (tab.id == activeTabId) loadProgress = newProgress
             }
 
             override fun onReceivedTitle(view: WebView?, title: String?) {
@@ -358,7 +358,7 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
                 }
                 tab.canBack = view?.canGoBack() == true
                 tab.canForward = view?.canGoForward() == true
-                if (tab.id == activeTabId) progress = 100
+                if (tab.id == activeTabId) loadProgress = 100
             }
 
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = false
@@ -559,9 +559,9 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
                     }
                 }
             }
-            if (progress in 1..99) {
+            if (loadProgress in 1..99) {
                 LinearProgressIndicator(
-                    progress = { progress / 100f },
+                    progress = { loadProgress / 100f },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(3.dp),
