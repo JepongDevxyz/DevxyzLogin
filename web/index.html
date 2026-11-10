@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DevxyzLogin — Antidetect Browser</title>
+<style>
+:root,[data-theme="dark"]{--bg:#0b0e14;--card:#151a24;--card2:#1b2231;--ink:#eef1f7;--line:#262f42;--muted:#8b96ab;--accent:#4d7cff;--accent2:#22c07a;--chip:#212a3d;--danger:#e5534b;--warn:#e8a13a;--input:#0f141f;--hover:#1e2739;--shadow:rgba(0,0,0,.5)}
+[data-theme="light"]{--bg:#f2f4f8;--card:#ffffff;--card2:#eef1f7;--ink:#141a26;--line:#d8dee9;--muted:#5f6b80;--accent:#2f62e8;--accent2:#14945f;--chip:#e7ecf4;--danger:#c93a33;--warn:#b97a17;--input:#ffffff;--hover:#eef2fa;--shadow:rgba(20,30,60,.22)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;color:var(--ink)}
+a{color:var(--accent)}
+.hidden{display:none!important}
+.app{display:flex;min-height:100vh}
+.sidebar{width:228px;flex:0 0 228px;background:var(--card);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:16px 12px;position:sticky;top:0;height:100vh}
+.logo{display:flex;align-items:center;gap:10px;padding:2px 8px 16px;font-size:17px;font-weight:800;letter-spacing:.2px}
+.logo-mark{width:32px;height:32px;border-radius:9px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px}
+.logo-sub{font-size:10px;color:var(--muted);font-weight:500}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;color:var(--muted);background:none;border:none;font-size:13.5px;font-weight:600;text-align:left;width:100%}
+.nav-item:hover{background:var(--hover);color:var(--ink)}
+.nav-item.active{background:var(--chip);color:var(--ink)}
+.nav-ico{width:18px;text-align:center;flex:0 0 18px}
+.beta{margin-left:auto;font-size:9px;background:var(--accent);color:#fff;border-radius:5px;padding:1px 5px;font-weight:800}
+.sidebar-foot{margin-top:auto;display:flex;flex-direction:column;gap:8px}
+.plan-card{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px}
+.plan-title{font-weight:800;font-size:13px}
+.plan-sub{color:var(--muted);font-size:12px;margin-top:3px}
+.plan-bar{height:6px;border-radius:3px;background:var(--chip);margin-top:9px;overflow:hidden}
+.plan-fill{height:100%;background:var(--accent2);border-radius:3px}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.trial-banner{display:flex;align-items:center;gap:10px;background:var(--warn);color:#1c1503;padding:8px 16px;font-size:13px;font-weight:600}
+.topbar{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:30;flex-wrap:wrap}
+.search-box{display:flex;align-items:center;gap:8px;background:var(--input);border:1px solid var(--line);border-radius:9px;padding:7px 11px;min-width:220px;flex:0 1 340px}
+.search-box input{background:none;border:none;outline:none;width:100%;font-size:13.5px}
+.top-actions{margin-left:auto;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.btn{background:var(--chip);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:8px 14px;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:7px}
+.btn:hover{background:var(--hover)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent);opacity:.9}
+.btn-green{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.btn-danger{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn-ghost{background:none;border-color:transparent;color:var(--muted)}
+.btn-ghost:hover{color:var(--ink)}
+.btn-sm{padding:5px 10px;font-size:12px;border-radius:7px}
+.icon-btn{background:none;border:none;color:var(--muted);font-size:16px;padding:5px 8px;border-radius:7px;line-height:1}
+.icon-btn:hover{color:var(--ink);background:var(--hover)}
+.split{position:relative;display:inline-flex}
+.dropdown{position:absolute;top:calc(100% + 6px);right:0;background:var(--card);border:1px solid var(--line);border-radius:11px;box-shadow:0 14px 34px var(--shadow);min-width:230px;padding:5px;z-index:80}
+.dropdown-item{display:flex;flex-direction:column;gap:1px;width:100%;text-align:left;background:none;border:none;color:var(--ink);padding:8px 10px;border-radius:8px;font-size:13px;font-weight:600}
+.dropdown-item:hover{background:var(--hover)}
+.dropdown-sub{font-size:11.5px;color:var(--muted);font-weight:500}
+.page{padding:20px;max-width:1440px;width:100%;margin:0 auto}
+.page-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.page-title{font-size:20px;font-weight:800}
+.section-title{font-size:15px;font-weight:800;margin-bottom:8px}
+.sub-text{color:var(--muted);font-size:12.5px}
+.folder-tabs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.folder-tab{background:none;border:1px solid transparent;color:var(--muted);padding:7px 13px;border-radius:999px;font-size:13px;font-weight:700}
+.folder-tab:hover{color:var(--ink)}
+.folder-tab.active{background:var(--chip);color:var(--ink);border-color:var(--line)}
+.filters{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.input{background:var(--input);border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:13.5px;outline:none}
+.input:focus{border-color:var(--accent)}
+.select{background:var(--input);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:13.5px;outline:none}
+.textarea{background:var(--input);border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:13px;outline:none;width:100%;min-height:88px;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace}
+.table-wrap{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:auto}
+.prof-table{width:100%;border-collapse:collapse;min-width:880px}
+.prof-table th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:11px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+.prof-table td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+.prof-table tr:last-child td{border-bottom:none}
+.row-check{width:16px;height:16px;accent-color:var(--accent)}
+.row-sel{cursor:pointer}
+.settings-section{margin-bottom:14px}
+.cell-name{font-weight:700;min-width:130px}
+.inline-edit{cursor:text;border-radius:6px;padding:2px 5px;margin-left:-5px}
+.inline-edit:hover{background:var(--hover)}
+.inline-input{background:var(--input);border:1px solid var(--accent);border-radius:6px;padding:3px 7px;font-size:13px;width:150px;outline:none}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--chip)}
+.badge-ready{color:var(--muted)}
+.badge-running{color:var(--accent2)}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+.status-dot.on{background:var(--accent2)}
+.proxy-cell{white-space:nowrap;font-size:12.5px;color:var(--muted)}
+.flag{font-size:15px}
+.notes-cell{color:var(--muted);max-width:190px;font-size:12.5px;cursor:text}
+.tags-cell{display:flex;gap:4px;flex-wrap:wrap;max-width:170px}
+.tag-chip{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;color:#fff;cursor:pointer}
+.run-btn{min-width:76px;justify-content:center}
+.menu{position:absolute;background:var(--card);border:1px solid var(--line);border-radius:11px;box-shadow:0 14px 34px var(--shadow);min-width:210px;padding:5px;z-index:90}
+.menu-item{display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:none;border:none;color:var(--ink);padding:8px 10px;border-radius:8px;font-size:13px;font-weight:600}
+.menu-item:hover{background:var(--hover)}
+.menu-item.danger{color:var(--danger)}
+.menu-sep{height:1px;background:var(--line);margin:4px 6px}
+.bulk-bar{display:none;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--accent);border-radius:12px;padding:9px 13px;margin-bottom:12px;flex-wrap:wrap}
+.bulk-bar.show{display:flex}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.grid{display:grid;gap:14px}
+.grid-2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.grid-3{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.field{margin-bottom:13px}
+.label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px}
+.form-row{display:flex;gap:12px;flex-wrap:wrap}
+.form-col{flex:1;min-width:150px}
+.radio-row{display:flex;gap:8px;flex-wrap:wrap}
+.radio-pill{border:1px solid var(--line);background:var(--input);border-radius:9px;padding:8px 13px;font-size:13px;font-weight:600;cursor:pointer}
+.radio-pill.sel{border-color:var(--accent);color:var(--accent);background:var(--chip)}
+.check-row{display:flex;align-items:center;gap:9px;padding:6px 0;font-size:13.5px}
+.toggle{width:42px;height:24px;border-radius:999px;background:var(--chip);border:1px solid var(--line);position:relative;cursor:pointer;flex:0 0 42px;padding:0}
+.toggle::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--muted);transition:all .15s}
+.toggle.on{background:var(--accent);border-color:var(--accent)}
+.toggle.on::after{left:20px;background:#fff}
+.os-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:9px}
+.os-card{border:1px solid var(--line);background:var(--input);border-radius:11px;padding:13px 10px;text-align:center;cursor:pointer;font-weight:700;font-size:13px;color:var(--ink)}
+.os-card:hover{border-color:var(--muted)}
+.os-card.sel{border-color:var(--accent);background:var(--chip)}
+.os-ico{font-size:22px;display:block;margin-bottom:6px}
+.os-lock{font-size:11px;color:var(--warn);font-weight:600;display:block;margin-top:4px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding:0 4px}
+.tab{background:none;border:none;color:var(--muted);font-size:13.5px;font-weight:700;padding:11px 13px;border-bottom:2px solid transparent}
+.tab:hover{color:var(--ink)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.editor-overlay{position:fixed;inset:0;background:rgba(4,6,10,.66);z-index:100;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:22px 12px}
+.editor-panel{background:var(--card);border:1px solid var(--line);border-radius:16px;width:1060px;max-width:100%;box-shadow:0 24px 60px var(--shadow)}
+.editor-head{display:flex;align-items:center;gap:10px;padding:15px 18px 0}
+.editor-title{font-size:17px;font-weight:800}
+.editor-body{display:flex;gap:18px;padding:16px 18px}
+.editor-main{flex:1;min-width:0}
+.editor-side{width:290px;flex:0 0 290px}
+.summary-list{display:flex;flex-direction:column;gap:7px;font-size:12.5px}
+.summary-row{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed var(--line);padding-bottom:6px}
+.summary-k{color:var(--muted)}
+.summary-v{font-weight:600;text-align:right;word-break:break-all}
+.modal-overlay{position:fixed;inset:0;background:rgba(4,6,10,.66);z-index:120;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:var(--card);border:1px solid var(--line);border-radius:15px;width:520px;max-width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 60px var(--shadow)}
+.modal.wide{width:760px}
+.modal-head{display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid var(--line)}
+.modal-title{font-size:15.5px;font-weight:800}
+.modal-body{padding:16px 18px;overflow:auto}
+.modal-foot{display:flex;justify-content:flex-end;gap:9px;padding:13px 18px;border-top:1px solid var(--line)}
+.toast-wrap{position:fixed;bottom:18px;right:18px;z-index:200;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--card2);border:1px solid var(--accent);color:var(--ink);border-radius:11px;padding:11px 15px;font-size:13px;font-weight:600;box-shadow:0 10px 26px var(--shadow);max-width:340px}
+.toast.err{border-color:var(--danger)}
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 190px);min-height:420px}
+.chat-log{flex:1;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:6px 2px 14px}
+.chat-msg{max-width:78%;border-radius:13px;padding:10px 13px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+.chat-msg.bot{background:var(--card);border:1px solid var(--line);align-self:flex-start}
+.chat-msg.user{background:var(--accent);color:#fff;align-self:flex-end}
+.chat-input-row{display:flex;gap:9px}
+.template-chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.chip-btn{background:var(--chip);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:7px 13px;font-size:12.5px;font-weight:700}
+.chip-btn:hover{border-color:var(--accent);color:var(--accent)}
+.code-block{background:var(--input);border:1px solid var(--line);border-radius:11px;padding:13px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;white-space:pre-wrap;word-break:break-all;line-height:1.55}
+.api-token{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.api-token .code-block{flex:1;min-width:220px}
+.endpoint-row{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.method{font-weight:800;font-size:11px;padding:2px 7px;border-radius:6px;background:var(--chip);color:var(--accent2);min-width:52px;text-align:center}
+.device-empty{text-align:center;padding:42px 16px;color:var(--muted)}
+.device-ico{font-size:40px;display:block;margin-bottom:10px}
+.settings-layout{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.settings-nav{width:190px;flex:0 0 190px;display:flex;flex-direction:column;gap:2px}
+.settings-main{flex:1;min-width:280px}
+.member-row,.session-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.plan-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.plan-option{border:1px solid var(--line);border-radius:13px;padding:15px;background:var(--input)}
+.plan-option.current{border-color:var(--accent2)}
+.plan-price{font-size:21px;font-weight:900;margin:5px 0}
+.ext-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.log-box{background:#070a10;color:#9fe8c1;border-radius:11px;padding:12px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.6;white-space:pre-wrap;max-height:260px;overflow:auto;border:1px solid var(--line)}
+.history-list{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--muted)}
+.empty-state{text-align:center;padding:38px 16px;color:var(--muted)}
+.kbd{font-family:ui-monospace,Menlo,monospace;background:var(--chip);border-radius:5px;padding:1px 6px;font-size:11.5px}
+.fp-preview{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.7;word-break:break-all}
+.color-dot{width:14px;height:14px;border-radius:50%;display:inline-block;cursor:pointer;border:2px solid transparent}
+.color-dot.sel{border-color:var(--ink)}
+@media(max-width:900px){.sidebar{display:none}.editor-body{flex-direction:column}.editor-side{width:100%;flex:none}.settings-nav{width:100%;flex:none;flex-direction:row;flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo"><span class="logo-mark">D</span><span>DevxyzLogin<br><span class="logo-sub">ANTIDETECT BROWSER</span></span></div>
+    <nav class="nav" id="sideNav">
+      <button class="nav-item active" data-page="profiles"><span class="nav-ico">▦</span>All profiles</button>
+      <button class="nav-item" data-page="proxies"><span class="nav-ico">🌐</span>Proxies</button>
+      <button class="nav-item" data-page="ai"><span class="nav-ico">✦</span>AI Assistant</button>
+      <button class="nav-item" data-page="api"><span class="nav-ico">⌘</span>API &amp; MCP</button>
+      <button class="nav-item" data-page="cloud"><span class="nav-ico">📱</span>Cloud Android<span class="beta">BETA</span></button>
+      <button class="nav-item" data-page="devices"><span class="nav-ico">🖧</span>Proxy Devices<span class="beta">BETA</span></button>
+      <button class="nav-item" data-page="settings"><span class="nav-ico">⚙</span>Settings</button>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="plan-card">
+        <div class="plan-title">Forever Free</div>
+        <div class="plan-sub" id="planUsage">0 profiles used</div>
+        <div class="plan-bar"><div class="plan-fill" id="planFill" style="width:0%"></div></div>
+        <button class="btn btn-primary btn-sm" style="margin-top:10px;width:100%;justify-content:center" id="upgradeBtn">Upgrade plan</button>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="themeBtn">☾ Dark / Light mode</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="trial-banner" id="trialBanner"><span>⏳ Your trial account has 7 more days left. Unlock all profiles and team features.</span><button class="btn btn-sm" id="payNowBtn">Pay now</button><button class="icon-btn" id="trialClose" style="color:#1c1503">✕</button></div>
+    <header class="topbar">
+      <div class="search-box"><span>🔍</span><input id="globalSearch" type="text" placeholder="Search profiles by name or ID…"></div>
+      <div class="top-actions">
+        <button class="btn" id="inviteBtn">🎁 Invite and get 150$</button>
+        <button class="btn btn-ghost" id="themeBtnTop">☾</button>
+        <div class="split">
+          <button class="btn btn-primary" id="addProfileBtn">＋ Add profile</button>
+          <button class="btn btn-primary" id="addProfileCaret">▾</button>
+          <div class="dropdown hidden" id="addDropdown">
+            <button class="dropdown-item" data-add="custom">Custom profile<span class="dropdown-sub">Full fingerprint wizard, all tabs</span></button>
+            <button class="dropdown-item" data-add="bulk">Bulk create (up to 30)<span class="dropdown-sub">Many profiles, one fingerprint template</span></button>
+            <button class="dropdown-item" data-add="quick">Quick profile<span class="dropdown-sub">Random fingerprint, one click</span></button>
+          </div>
+        </div>
+        <button class="btn" id="accountBtn">👤 <span id="accountEmailLabel">devxyz@local</span></button>
+      </div>
+    </header>
+
+    <!-- PROFILES PAGE -->
+    <section class="page" id="page-profiles">
+      <div class="page-head"><div class="page-title">All profiles</div><span class="sub-text" id="profileCountLabel"></span></div>
+      <div class="folder-tabs" id="folderTabs"></div>
+      <div class="bulk-bar" id="bulkBar">
+        <strong id="bulkCount"></strong>
+        <button class="btn btn-sm btn-green" data-bulk="run">▶ Run</button>
+        <button class="btn btn-sm" data-bulk="stop">■ Stop</button>
+        <button class="btn btn-sm" data-bulk="clone">Clone</button>
+        <button class="btn btn-sm" data-bulk="transfer">Transfer</button>
+        <button class="btn btn-sm" data-bulk="export">Export profiles</button>
+        <button class="btn btn-sm" data-bulk="fingerprint">Update fingerprint</button>
+        <button class="btn btn-sm" data-bulk="automation">Automation</button>
+        <button class="btn btn-sm" data-bulk="folder">Folders ▸ Add to Folder</button>
+        <button class="btn btn-sm btn-danger" data-bulk="delete">Delete</button>
+        <button class="btn btn-sm btn-ghost" data-bulk="clear">Clear selection</button>
+      </div>
+      <div class="filters">
+        <div class="search-box"><span>🔍</span><input id="profileSearch" type="text" placeholder="Search by name…"></div>
+        <select class="select" id="tagFilter"><option value="">All tags</option></select>
+        <select class="select" id="statusFilter"><option value="">All statuses</option><option value="ready">Ready</option><option value="running">Running</option></select>
+        <select class="select" id="statusTagFilter"><option value="">All status fields</option></select>
+        <button class="btn btn-sm" id="editingFieldsBtn">✎ Editing Fields</button>
+      </div>
+      <div class="table-wrap">
+        <table class="prof-table">
+          <thead><tr>
+            <th><input type="checkbox" class="row-check" id="checkAll"></th>
+            <th>Profile name</th><th>State</th><th>Proxy</th><th>Notes</th><th>Tags</th><th>Status</th><th>Action</th><th></th>
+          </tr></thead>
+          <tbody id="profileRows"></tbody>
+        </table>
+        <div class="empty-state hidden" id="profilesEmpty">No profiles match. Click <strong>＋ Add profile</strong> or the quick <strong>＋</strong> to create one.</div>
+      </div>
+      <button class="btn" id="quickAddBtn" style="margin-top:12px">＋ Quick profile</button>
+    </section>
+
+    <!-- PROXIES PAGE -->
+    <section class="page hidden" id="page-proxies">
+      <div class="page-head"><div class="page-title">Proxies</div><button class="btn btn-primary" id="addProxyBtn" style="margin-left:auto">＋ Add proxy</button></div>
+      <div class="grid grid-3" style="margin-bottom:14px">
+        <div class="card"><div class="section-title">🏠 Residential proxy</div><div class="sub-text">Real home IPs, 100+ countries. From $3.50 / GB.</div><button class="btn btn-primary btn-sm" data-buy="Residential" style="margin-top:10px">Buy proxy</button></div>
+        <div class="card"><div class="section-title">📶 Mobile proxy</div><div class="sub-text">4G/5G carrier IPs for social platforms. From $5.00 / GB.</div><button class="btn btn-primary btn-sm" data-buy="Mobile" style="margin-top:10px">Buy proxy</button></div>
+        <div class="card"><div class="section-title">🖥 Datacenter proxy</div><div class="sub-text">Fast datacenter IPs. Free locations: US, DE, NL, GB, FR.</div><button class="btn btn-primary btn-sm" data-buy="Datacenter" style="margin-top:10px">Buy proxy</button></div>
+      </div>
+      <div class="card">
+        <div class="section-title">Free datacenter locations</div>
+        <div class="tags-cell" id="freeLocations"></div>
+      </div>
+      <div class="table-wrap" style="margin-top:14px">
+        <table class="prof-table"><thead><tr><th>Name</th><th>Type</th><th>Host</th><th>Port</th><th>Country</th><th>IP</th><th></th></tr></thead><tbody id="proxyRows"></tbody></table>
+        <div class="empty-state hidden" id="proxiesEmpty">No proxies yet. Add your own or buy one above — proxies are shared with the profile editor.</div>
+      </div>
+    </section>
+
+    <!-- AI ASSISTANT PAGE -->
+    <section class="page hidden" id="page-ai">
+      <div class="page-head"><div class="page-title">✦ AI Assistant</div><span class="sub-text">Describe a task in plain language, or start from a template.</span></div>
+      <div class="template-chips" id="templateChips">
+        <button class="chip-btn" data-tpl="batch">🗂 Batch Create Profiles</button>
+        <button class="chip-btn" data-tpl="social">📘 Facebook &amp; Instagram warm-up</button>
+        <button class="chip-btn" data-tpl="tiktok">🎵 TikTok warm-up</button>
+        <button class="chip-btn" data-tpl="youtube">▶ YouTube warm-up</button>
+        <button class="chip-btn" data-tpl="shopping">🛒 Shopping Simulation</button>
+        <button class="chip-btn" data-tpl="news">📰 News Reading</button>
+      </div>
+      <div class="chat-wrap card">
+        <div class="chat-log" id="chatLog"></div>
+        <div class="chat-input-row">
+          <input class="input" id="chatInput" type="text" placeholder="e.g. Create 5 profiles for TikTok with US proxies…" style="flex:1">
+          <button class="btn btn-primary" id="chatSend">Send</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- API & MCP PAGE -->
+    <section class="page hidden" id="page-api">
+      <div class="page-head"><div class="page-title">API &amp; MCP</div></div>
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="section-title">API token</div>
+          <div class="sub-text" style="margin-bottom:10px">Use this token with the REST API and the local SDKs (Node.js / Python). Keep it secret.</div>
+          <div class="api-token"><div class="code-block" id="apiTokenBox"></div><button class="btn btn-sm" id="copyTokenBtn">Copy</button><button class="btn btn-sm" id="regenTokenBtn">Regenerate</button></div>
+          <div style="margin-top:14px"><a href="https://api.gologin.com/docs" target="_blank" rel="noopener" id="apiDocsLink">REST API documentation ↗</a></div>
+        </div>
+        <div class="card">
+          <div class="section-title">MCP server setup</div>
+          <div class="sub-text" style="margin-bottom:10px">Add this to your MCP client config to drive DevxyzLogin profiles from an AI agent.</div>
+          <div class="code-block" id="mcpConfig"></div>
+          <button class="btn btn-sm" id="copyMcpBtn" style="margin-top:10px">Copy MCP config</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="section-title">Endpoints</div>
+        <div id="endpointList"></div>
+      </div>
+    </section>
+
+    <!-- CLOUD ANDROID PAGE -->
+    <section class="page hidden" id="page-cloud">
+      <div class="page-head"><div class="page-title">📱 Cloud Android <span class="beta">BETA</span></div><button class="btn btn-primary" id="addCloudDeviceBtn" style="margin-left:auto">＋ Add device</button></div>
+      <div class="sub-text" style="margin-bottom:12px">Cloud Android phones run your mobile profiles in the cloud — each with its own Android fingerprint, no physical device needed.</div>
+      <div class="card" id="cloudDeviceWrap"></div>
+    </section>
+
+    <!-- PROXY DEVICES PAGE -->
+    <section class="page hidden" id="page-devices">
+      <div class="page-head"><div class="page-title">🖧 Proxy Devices <span class="beta">BETA</span></div><button class="btn btn-primary" id="addProxyDeviceBtn" style="margin-left:auto">＋ Add device</button></div>
+      <div class="sub-text" style="margin-bottom:12px">Turn a phone or computer on your network into a proxy device and route profiles through its real IP.</div>
+      <div class="card" id="proxyDeviceWrap"></div>
+    </section>
+
+    <!-- SETTINGS PAGE -->
+    <section class="page hidden" id="page-settings">
+      <div class="page-head"><div class="page-title">Settings</div></div>
+      <div class="settings-layout">
+        <div class="settings-nav" id="settingsNav">
+          <button class="nav-item active" data-set="overview"><span class="nav-ico">◉</span>Overview</button>
+          <button class="nav-item" data-set="billing"><span class="nav-ico">💳</span>Billing</button>
+          <button class="nav-item" data-set="members"><span class="nav-ico">👥</span>Members</button>
+          <button class="nav-item" data-set="security"><span class="nav-ico">🔒</span>Security &amp; sessions</button>
+          <button class="nav-item" data-set="restore"><span class="nav-ico">♻</span>Restore profiles</button>
+        </div>
+        <div class="settings-main">
+          <div class="card settings-section" data-section="overview">
+            <div class="section-title">Workspace overview</div>
+            <div class="field"><label class="label">Account email</label><input class="input" id="setEmail" type="email" style="width:100%"></div>
+            <div class="field"><label class="label">Workspace name</label><input class="input" id="setWorkspace" type="text" style="width:100%"></div>
+            <div class="field"><label class="label">Current plan</label><div class="badge badge-running">Forever Free</div></div>
+            <button class="btn btn-primary" id="saveOverviewBtn">Save changes</button>
+            <div class="section-title" style="margin-top:22px">Useful links</div>
+            <div class="history-list"><span>• Help center &amp; docs — docs.devxyzlogin.local</span><span>• REST API documentation — api.gologin.com/docs</span><span>• Community &amp; support chat</span><span>• Release notes</span></div>
+          </div>
+          <div class="card settings-section hidden" data-section="billing">
+            <div class="section-title">Billing plans</div>
+            <div class="plan-cards" id="planCards"></div>
+            <div class="field" style="margin-top:16px"><label class="label">Promo code</label><div class="form-row"><input class="input" id="promoInput" type="text" placeholder="Enter promo code" style="flex:1"><button class="btn" id="promoApplyBtn">Apply</button></div></div>
+            <div class="section-title" style="margin-top:18px">Billing history</div>
+            <div class="history-list" id="billingHistory"></div>
+          </div>
+          <div class="card settings-section hidden" data-section="members">
+            <div class="section-title">Members &amp; workspace access</div>
+            <div class="sub-text" style="margin-bottom:10px">Invite team members. Choose <em>can view</em> or <em>can edit</em> — access applies to all folders and workspaces.</div>
+            <div class="form-row" style="margin-bottom:8px"><input class="input" id="memberEmail" type="email" placeholder="member@email.com" style="flex:1"><select class="select" id="memberRole"><option value="can edit">can edit</option><option value="can view">can view</option></select><button class="btn btn-primary" id="addMemberBtn">Add member</button></div>
+            <div id="memberList"></div>
+          </div>
+          <div class="card settings-section hidden" data-section="security">
+            <div class="section-title">Two-step verification (2FA)</div>
+            <div class="check-row"><button class="toggle" id="twoFaToggle" aria-label="Toggle 2FA"></button><span>Require an authenticator code at sign-in</span></div>
+            <div class="section-title" style="margin-top:20px">Active sessions</div>
+            <div id="sessionList"></div>
+          </div>
+          <div class="card settings-section hidden" data-section="restore">
+            <div class="section-title">Restore profiles</div>
+            <div class="sub-text" style="margin-bottom:10px">Deleted profiles are kept here and can be restored to the list.</div>
+            <div id="restoreList"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div id="overlayRoot"></div>
+<div class="toast-wrap" id="toastWrap"></div>
+<script>
+"use strict";
+/* ============ DevxyzLogin — single-file web dashboard (local simulation) ============ */
+const LS_KEY="devxyzlogin_v1";
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid=()=> "p_"+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3);
+const nowStr=()=> new Date().toLocaleString();
+const TAG_COLORS=["#4d7cff","#22c07a","#e8a13a","#e5534b","#9b6cff","#21b8c7","#e56bb1"];
+const STATUS_FIELDS=[{text:"New",color:"#4d7cff"},{text:"Warming",color:"#e8a13a"},{text:"Active",color:"#22c07a"},{text:"Banned",color:"#e5534b"},{text:"Paused",color:"#8b96ab"}];
+const TIMEZONES=["UTC","America/New_York","America/Chicago","America/Los_Angeles","Europe/London","Europe/Berlin","Europe/Moscow","Asia/Dubai","Asia/Kolkata","Asia/Singapore","Asia/Manila","Asia/Tokyo","Australia/Sydney","Pacific/Auckland"];
+const LANGUAGES=["en-US","en-GB","es-ES","de-DE","fr-FR","pt-BR","fil-PH","ja-JP"];
+const RESOLUTIONS=["1920x1080","1536x864","1366x768","1440x900","2560x1440","1280x720","412x915","390x844","360x800"];
+const EXT_CATALOG=["uBlock Origin","AdGuard AdBlocker","Ghostery","MetaMask","LastPass","Grammarly","Tampermonkey","Cookie Editor","WebRTC Leak Shield","User-Agent Switcher"];
+const COUNTRIES=[["US","United States","🇺🇸","185.220.14."],["DE","Germany","🇩🇪","45.155.204."],["NL","Netherlands","🇳🇱","193.142.146."],["GB","United Kingdom","🇬🇧","89.238.150."],["FR","France","🇫🇷","51.159.22."],["PH","Philippines","🇵🇭","203.177.42."],["SG","Singapore","🇸🇬","128.199.88."],["JP","Japan","🇯🇵","103.27.9."]];
+const OS_CONFIG={
+ "Windows 11":{platform:"Win32",uaOs:"Windows NT 10.0; Win64; x64",vendor:"Google Inc. (Intel)",renderer:"ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0, D3D11)",fonts:["Arial","Calibri","Segoe UI","Times New Roman","Verdana"]},
+ "Windows 10":{platform:"Win32",uaOs:"Windows NT 10.0; Win64; x64",vendor:"Google Inc. (NVIDIA)",renderer:"ANGLE (NVIDIA, NVIDIA GeForce GTX 1660 Direct3D11 vs_5_0 ps_5_0, D3D11)",fonts:["Arial","Calibri","Segoe UI","Tahoma","Verdana"]},
+ "Mac Intel":{platform:"MacIntel",uaOs:"Macintosh; Intel Mac OS X 10_15_7",vendor:"Google Inc. (Intel Inc.)",renderer:"ANGLE (Intel Inc., Intel(R) Iris(TM) Plus Graphics 640, OpenGL 4.1)",fonts:["Helvetica","Arial","Menlo","Monaco","Georgia"]},
+ "Mac ARM":{platform:"MacIntel",uaOs:"Macintosh; ARM Mac OS X 14_4_1",vendor:"Google Inc. (Apple)",renderer:"ANGLE (Apple, Apple M1, OpenGL 4.1)",fonts:["Helvetica","Arial","Menlo","Monaco","Georgia"]},
+ "Linux":{platform:"Linux x86_64",uaOs:"X11; Linux x86_64",vendor:"Google Inc. (Mesa)",renderer:"ANGLE (Mesa, llvmpipe (LLVM 15.0.7, 256 bits), OpenGL 4.5)",fonts:["DejaVu Sans","Liberation Sans","Ubuntu","Noto Sans"]},
+ "Android":{platform:"Linux armv8l",uaOs:"Linux; Android 14; SM-S918B",vendor:"Qualcomm",renderer:"Adreno (TM) 740",fonts:["Roboto","Noto Sans","Droid Sans"]}
+};
+const OS_LIST=Object.keys(OS_CONFIG);
+function pick(a){return a[Math.floor(Math.random()*a.length)]}
+function randInt(a,b){return a+Math.floor(Math.random()*(b-a+1))}
+function genFingerprint(os){
+  os=os||pick(OS_LIST); const cfg=OS_CONFIG[os]; const ver=randInt(126,132);
+  const ua="Mozilla/5.0 ("+cfg.uaOs+") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/"+ver+".0.0.0 Safari/537.36";
+  const c=pick(COUNTRIES);
+  return {os:os,browserVersion:"Chrome "+ver,ua:ua,screen:os==="Android"?pick(["412x915","390x844","360x800"]):pick(RESOLUTIONS.slice(0,6)),
+    languages:[pick(LANGUAGES)],platform:cfg.platform,cpu:pick([4,6,8,8,12,16]),ram:pick([4,8,8,16]),doNotTrack:false,
+    timezoneAuto:true,timezone:pick(TIMEZONES),fontsMasking:true,fonts:cfg.fonts.slice(),
+    mediaVideo:randInt(1,2),mediaAudioIn:randInt(1,2),mediaAudioOut:randInt(1,2),
+    canvas:pick(["Noise","Noise","Block"]),webgl:"Noise",webglVendor:cfg.vendor,webglRenderer:cfg.renderer,
+    audioContext:"Noise",clientRects:"Noise",webrtc:"Based on IP",
+    geoMode:"Prompt",geoAuto:true,geoLat:(14.55+Math.random()).toFixed(6),geoLong:(120.98+Math.random()).toFixed(6),
+    country:c[0],countryName:c[1],flag:c[2],ip:c[3]+randInt(2,250),
+    storageCookies:true,storageLocal:true,seed:Math.floor(Math.random()*1e9)};
+}
+function defaultProxy(){return {mode:"none",proxyId:"",host:"",port:"",type:"SOCKS5",login:"",password:"",buyCountry:"US"}}
+function makeProfile(name,fp){
+  fp=fp||genFingerprint();
+  return {id:uid(),name:name||"Untitled profile",notes:"",state:"ready",folderId:"",tags:[],statusField:{...STATUS_FIELDS[0]},
+    proxy:{...defaultProxy(),ip:fp.ip,flag:fp.flag,country:fp.countryName},fp:fp,cookies:[],extensions:[],bookmarks:"",
+    createdAt:nowStr(),history:[{t:nowStr(),a:"Profile created"}]};
+}
+function seedState(){
+  const profiles=[makeProfile("Facebook Ads — US"),makeProfile("TikTok Shop — PH"),makeProfile("Gmail Farm 01")];
+  profiles[1].tags=[{text:"shop",color:TAG_COLORS[1]}]; profiles[0].tags=[{text:"ads",color:TAG_COLORS[0]}];
+  profiles[0].statusField={...STATUS_FIELDS[2]};
+  return {profiles:profiles,deleted:[],folders:[{id:"f_work",name:"Work"},{id:"f_farm",name:"Farms"}],proxies:[
+    {id:uid(),name:"US Residential 1",type:"SOCKS5",host:"us.proxy.devxyz",port:"8080",login:"user1",password:"",country:"United States",flag:"🇺🇸",ip:"185.220.14.87"},
+    {id:uid(),name:"PH Mobile",type:"HTTP",host:"ph.proxy.devxyz",port:"3128",login:"",password:"",country:"Philippines",flag:"🇵🇭",ip:"203.177.42.19"}],
+    cloudDevices:[],proxyDevices:[],members:[{email:"devxyz@local",role:"Owner"}],
+    sessions:[{id:uid(),label:"This device — Chrome, Manila PH",when:"Active now",current:true},{id:uid(),label:"Android app — Samsung, Manila PH",when:"2 hours ago",current:false}],
+    email:"devxyz@local",workspace:"Devxyz Workspace",twoFA:false,theme:"dark",
+    apiToken:"dl_"+Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,14),
+    globalExtFlags:[],chat:[{who:"bot",text:"Hi! I am the DevxyzLogin AI Assistant. Pick a template above or type a task — e.g. “Create 5 profiles for TikTok”."}],
+    billing:[{t:nowStr(),a:"Forever Free plan activated — $0.00"}]};
+}
+let S;
+try{S=JSON.parse(localStorage.getItem(LS_KEY))||seedState()}catch(e){S=seedState()}
+function save(){localStorage.setItem(LS_KEY,JSON.stringify(S))}
+save();
+let selected=new Set(), activeFolder="", editorCtx=null;
+
+/* ---------- toasts & dialogs (no native alert/confirm/prompt) ---------- */
+function toast(msg,err){const t=document.createElement("div");t.className="toast"+(err?" err":"");t.textContent=msg;$("#toastWrap").appendChild(t);setTimeout(()=>t.remove(),3400)}
+function openModal(title,bodyHTML,footHTML,wide){
+  closeModal();
+  const ov=document.createElement("div");ov.className="modal-overlay";ov.id="modalOverlay";
+  ov.innerHTML='<div class="modal'+(wide?" wide":"")+'"><div class="modal-head"><div class="modal-title">'+esc(title)+'</div><button class="icon-btn" style="margin-left:auto" data-close="1">✕</button></div><div class="modal-body">'+bodyHTML+'</div>'+(footHTML?'<div class="modal-foot">'+footHTML+'</div>':"")+"</div>";
+  ov.addEventListener("click",e=>{if(e.target===ov||e.target.dataset.close)closeModal()});
+  $("#overlayRoot").appendChild(ov); return ov;
+}
+function closeModal(){const m=$("#modalOverlay");if(m)m.remove();const e=$("#editorOverlay");if(e&&arguments[0]==="editor")e.remove()}
+function confirmDialog(title,text,okLabel){
+  return new Promise(res=>{
+    const ov=openModal(title,'<p class="sub-text" style="font-size:13.5px">'+esc(text)+'</p>',
+      '<button class="btn" id="cfNo">Cancel</button><button class="btn btn-danger" id="cfYes">'+esc(okLabel||"Delete")+'</button>');
+    ov.querySelector("#cfNo").onclick=()=>{closeModal();res(false)};
+    ov.querySelector("#cfYes").onclick=()=>{closeModal();res(true)};
+  });
+}
+function promptDialog(title,label,initial,okLabel){
+  return new Promise(res=>{
+    const ov=openModal(title,'<div class="field"><label class="label">'+esc(label)+'</label><input class="input" id="pdInput" style="width:100%" value="'+esc(initial||"")+'"></div>',
+      '<button class="btn" id="pdNo">Cancel</button><button class="btn btn-primary" id="pdYes">'+esc(okLabel||"Save")+'</button>');
+    const inp=ov.querySelector("#pdInput"); inp.focus(); inp.select();
+    ov.querySelector("#pdNo").onclick=()=>{closeModal();res(null)};
+    ov.querySelector("#pdYes").onclick=()=>{closeModal();res(inp.value)};
+    inp.onkeydown=e=>{if(e.key==="Enter"){closeModal();res(inp.value)}};
+  });
+}
+function hist(p,action){p.history=p.history||[];p.history.unshift({t:nowStr(),a:action})}
+function findProfile(id){return S.profiles.find(p=>p.id===id)}
+function download(name,text){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:"application/json"}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+
+/* ---------- navigation ---------- */
+function showPage(page){
+  $$("#sideNav .nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
+  ["profiles","proxies","ai","api","cloud","devices","settings"].forEach(pg=>$("#page-"+pg).classList.toggle("hidden",pg!==page));
+  if(page==="profiles")renderProfiles(); if(page==="proxies")renderProxies();
+  if(page==="api")renderApi(); if(page==="cloud")renderDevices("cloud"); if(page==="devices")renderDevices("proxy");
+  if(page==="settings")renderSettings(); if(page==="ai")renderChat();
+  window.scrollTo(0,0);
+}
+$("#sideNav").addEventListener("click",e=>{const b=e.target.closest("[data-page]");if(b)showPage(b.dataset.page)});
+function applyTheme(){document.documentElement.dataset.theme=S.theme;$("#themeBtnTop").textContent=S.theme==="dark"?"☾":"☀"}
+function toggleTheme(){S.theme=S.theme==="dark"?"light":"dark";save();applyTheme();toast("Theme: "+S.theme)}
+$("#themeBtn").onclick=toggleTheme; $("#themeBtnTop").onclick=toggleTheme;
+$("#trialClose").onclick=()=>$("#trialBanner").remove();
+$("#payNowBtn").onclick=()=>{showPage("settings");switchSettings("billing")};
+$("#upgradeBtn").onclick=()=>{showPage("settings");switchSettings("billing")};
+$("#accountBtn").onclick=()=>{showPage("settings");switchSettings("overview")};
+$("#inviteBtn").onclick=()=>{
+  const link="https://devxyzlogin.local/invite?ref="+encodeURIComponent(S.email);
+  openModal("🎁 Invite and get 150$",'<p class="sub-text" style="margin-bottom:10px">Share your referral link. You get $150 credit for every team that upgrades, they get $150 too.</p><div class="code-block">'+esc(link)+'</div>',
+   '<button class="btn" data-close="1">Close</button><button class="btn btn-primary" id="invCopy">Copy link</button>')
+   .querySelector("#invCopy").onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(link);toast("Invite link copied")};
+};
+
+/* ---------- profiles list ---------- */
+function proxyLabel(p){
+  if(p.proxy.mode==="your"&&p.proxy.host)return esc(p.proxy.type)+" • "+esc(p.proxy.flag||"🌐")+" "+esc(p.proxy.ip||p.proxy.host);
+  if(p.proxy.mode==="builtin")return "DevxyzLogin • "+esc(p.proxy.flag||"🇺🇸")+" "+esc(p.proxy.ip||"");
+  if(p.proxy.proxyId){const px=S.proxies.find(x=>x.id===p.proxy.proxyId);if(px)return esc(px.type)+" • "+esc(px.flag||"🌐")+" "+esc(px.ip||px.host)}
+  return '<span class="sub-text">Without proxy</span>';
+}
+function renderPlan(){
+  $("#planUsage").textContent=S.profiles.length+" profiles used · "+S.profiles.filter(p=>p.state==="running").length+" running";
+  $("#planFill").style.width=Math.min(100,S.profiles.length*10)+"%";
+  $("#profileCountLabel").textContent=S.profiles.length+" total · "+S.deleted.length+" in restore bin";
+}
+function renderFolders(){
+  const wrap=$("#folderTabs");
+  let h='<button class="folder-tab'+(activeFolder===""?" active":"")+'" data-folder="">All profiles</button>';
+  S.folders.forEach(f=>{h+='<button class="folder-tab'+(activeFolder===f.id?" active":"")+'" data-folder="'+f.id+'">'+esc(f.name)+' <span data-delfolder="'+f.id+'" title="Delete folder">✕</span></button>'});
+  h+='<button class="folder-tab" id="addFolderBtn">＋ Add folder</button>';
+  wrap.innerHTML=h;
+  wrap.querySelectorAll("[data-folder]").forEach(b=>b.onclick=e=>{if(e.target.dataset.delfolder)return;activeFolder=b.dataset.folder;renderProfiles()});
+  wrap.querySelectorAll("[data-delfolder]").forEach(x=>x.onclick=async e=>{e.stopPropagation();if(await confirmDialog("Delete folder","Profiles in this folder move back to All profiles.","Delete")){S.profiles.forEach(p=>{if(p.folderId===x.dataset.delfolder)p.folderId=""});S.folders=S.folders.filter(f=>f.id!==x.dataset.delfolder);if(activeFolder===x.dataset.delfolder)activeFolder="";save();renderProfiles();toast("Folder deleted")}});
+  $("#addFolderBtn").onclick=async()=>{const n=await promptDialog("Add folder","Folder name","","Create folder");if(n&&n.trim()){S.folders.push({id:uid(),name:n.trim()});save();renderProfiles();toast("Folder added")}};
+}
+function allTags(){const m=new Map();S.profiles.forEach(p=>p.tags.forEach(t=>m.set(t.text,t)));return [...m.values()]}
+function renderFilters(){
+  const tf=$("#tagFilter"),cur=tf.value; tf.innerHTML='<option value="">All tags</option>'+allTags().map(t=>'<option value="'+esc(t.text)+'">'+esc(t.text)+'</option>').join(""); tf.value=cur;
+  const sf=$("#statusTagFilter"),cur2=sf.value; sf.innerHTML='<option value="">All status fields</option>'+STATUS_FIELDS.map(s=>'<option>'+esc(s.text)+'</option>').join(""); sf.value=cur2;
+}
+function filteredProfiles(){
+  const q=($("#profileSearch").value||$("#globalSearch").value||"").toLowerCase();
+  const tag=$("#tagFilter").value, st=$("#statusFilter").value, stag=$("#statusTagFilter").value;
+  return S.profiles.filter(p=>{
+    if(activeFolder&&p.folderId!==activeFolder)return false;
+    if(q&&!(p.name.toLowerCase().includes(q)||p.id.toLowerCase().includes(q)))return false;
+    if(tag&&!p.tags.some(t=>t.text===tag))return false;
+    if(st&&p.state!==st)return false;
+    if(stag&&p.statusField.text!==stag)return false;
+    return true;
+  });
+}
+function renderProfiles(){
+  renderPlan(); renderFolders(); renderFilters();
+  const list=filteredProfiles(); const tb=$("#profileRows");
+  $("#profilesEmpty").classList.toggle("hidden",list.length>0);
+  tb.innerHTML=list.map(p=>
+   '<tr data-row="'+p.id+'">'+
+   '<td><input type="checkbox" class="row-check row-sel" data-sel="'+p.id+'" '+(selected.has(p.id)?"checked":"")+'></td>'+
+   '<td class="cell-name"><span class="inline-edit" data-inline="name" data-id="'+p.id+'" title="Click to rename">'+esc(p.name)+'</span><br><span class="sub-text">'+esc(p.id)+'</span></td>'+
+   '<td><span class="badge '+(p.state==="running"?"badge-running":"badge-ready")+'"><span class="status-dot'+(p.state==="running"?" on":"")+'"></span>'+esc(p.state)+'</span></td>'+
+   '<td class="proxy-cell">'+proxyLabel(p)+'</td>'+
+   '<td class="notes-cell"><span class="inline-edit" data-inline="notes" data-id="'+p.id+'" title="Click to edit notes">'+esc(p.notes||"Add note…")+'</span></td>'+
+   '<td><div class="tags-cell">'+p.tags.map(t=>'<span class="tag-chip" style="background:'+t.color+'" data-untag="'+p.id+'" data-tag="'+esc(t.text)+'" title="Click to remove">'+esc(t.text)+'</span>').join("")+'<button class="icon-btn" data-addtag="'+p.id+'" title="Add tag">＋</button></div></td>'+
+   '<td><span class="tag-chip" style="background:'+p.statusField.color+'" data-statusfield="'+p.id+'" title="Click to change status">'+esc(p.statusField.text)+'</span></td>'+
+   '<td><button class="btn btn-sm run-btn '+(p.state==="running"?"btn-danger":"btn-green")+'" data-run="'+p.id+'">'+(p.state==="running"?"■ Stop":"▶ Run")+'</button></td>'+
+   '<td style="position:relative"><button class="icon-btn" data-menu="'+p.id+'">•••</button></td></tr>').join("");
+  tb.querySelectorAll("[data-sel]").forEach(c=>c.onchange=()=>{c.checked?selected.add(c.dataset.sel):selected.delete(c.dataset.sel);renderBulk()});
+  tb.querySelectorAll("[data-run]").forEach(b=>b.onclick=()=>toggleRun(b.dataset.run));
+  tb.querySelectorAll("[data-menu]").forEach(b=>b.onclick=e=>{e.stopPropagation();openRowMenu(b.dataset.menu,b)});
+  tb.querySelectorAll("[data-inline]").forEach(el=>el.onclick=()=>startInlineEdit(el));
+  tb.querySelectorAll("[data-addtag]").forEach(b=>b.onclick=()=>addTagDialog(b.dataset.addtag));
+  tb.querySelectorAll("[data-untag]").forEach(b=>b.onclick=()=>{const p=findProfile(b.dataset.untag);p.tags=p.tags.filter(t=>t.text!==b.dataset.tag);save();renderProfiles()});
+  tb.querySelectorAll("[data-statusfield]").forEach(b=>b.onclick=()=>statusFieldDialog(b.dataset.statusfield));
+  renderBulk();
+}
+function renderBulk(){
+  const bar=$("#bulkBar"); bar.classList.toggle("show",selected.size>0);
+  $("#bulkCount").textContent=selected.size+" selected";
+  $("#checkAll").checked=selected.size>0&&selected.size===S.profiles.length;
+}
+$("#checkAll").onchange=e=>{selected=e.target.checked?new Set(S.profiles.map(p=>p.id)):new Set();renderProfiles()};
+$("#profileSearch").oninput=()=>renderProfiles();
+$("#globalSearch").oninput=()=>{showPage("profiles")};
+$("#tagFilter").onchange=()=>renderProfiles();
+$("#statusFilter").onchange=()=>renderProfiles();
+$("#statusTagFilter").onchange=()=>renderProfiles();
+$("#editingFieldsBtn").onclick=()=>toast("Editing Fields: Name, Notes, Tags and Status are editable inline — click any of them in the table.");
+function startInlineEdit(el){
+  const p=findProfile(el.dataset.id); if(!p)return;
+  const field=el.dataset.inline; const cur=field==="name"?p.name:p.notes;
+  const inp=document.createElement("input"); inp.className="inline-input"; inp.value=cur;
+  el.replaceWith(inp); inp.focus(); inp.select();
+  const commit=()=>{const v=inp.value.trim(); if(field==="name"&&v)p.name=v; if(field==="notes")p.notes=v; hist(p,(field==="name"?"Renamed to “"+p.name+"”":"Notes updated")); save(); renderProfiles()};
+  inp.onblur=commit; inp.onkeydown=e=>{if(e.key==="Enter")inp.blur(); if(e.key==="Escape")renderProfiles()};
+}
+async function addTagDialog(pid){
+  const name=await promptDialog("Add tag","Tag name (e.g. ads, shop, farm)","","Add tag"); if(!name||!name.trim())return;
+  const p=findProfile(pid); const color=pick(TAG_COLORS);
+  if(!p.tags.some(t=>t.text===name.trim()))p.tags.push({text:name.trim(),color:color});
+  hist(p,"Tag added: "+name.trim()); save(); renderProfiles();
+}
+function statusFieldDialog(pid){
+  const p=findProfile(pid);
+  const ov=openModal("Profile status",STATUS_FIELDS.map((s,i)=>'<div class="check-row"><span class="color-dot'+(p.statusField.text===s.text?" sel":"")+'" style="background:'+s.color+'" data-sf="'+i+'"></span><button class="btn btn-sm" data-sf="'+i+'">'+esc(s.text)+'</button></div>').join(""),'<button class="btn" data-close="1">Close</button>');
+  ov.querySelectorAll("[data-sf]").forEach(b=>b.onclick=()=>{p.statusField={...STATUS_FIELDS[+b.dataset.sf]};hist(p,"Status set to "+p.statusField.text);save();closeModal();renderProfiles()});
+}
+</script>
+<script>
+/* ---------- row menu, cookies, share, automation, history ---------- */
+let openMenuEl=null;
+function closeMenus(){if(openMenuEl){openMenuEl.remove();openMenuEl=null}}
+document.addEventListener("click",()=>closeMenus());
+function openRowMenu(pid,anchor){
+  closeMenus(); const p=findProfile(pid); if(!p)return;
+  const m=document.createElement("div"); m.className="menu";
+  m.innerHTML=
+   '<button class="menu-item" data-m="settings">⚙ Settings</button>'+
+   '<button class="menu-item" data-m="clone">⧉ Clone</button>'+
+   '<button class="menu-item" data-m="cookies">🍪 Cookies</button>'+
+   '<button class="menu-item" data-m="folders">🗂 Folders</button>'+
+   '<button class="menu-item" data-m="automation">🤖 Automation / Cookie Bot</button>'+
+   '<button class="menu-item" data-m="share">↗ Share</button>'+
+   '<button class="menu-item" data-m="history">🕘 History</button>'+
+   '<div class="menu-sep"></div>'+
+   '<button class="menu-item danger" data-m="delete">🗑 Delete</button>';
+  document.body.appendChild(m);
+  const r=anchor.getBoundingClientRect(); m.style.top=(r.bottom+window.scrollY+4)+"px"; m.style.left=Math.max(8,r.right+window.scrollX-220)+"px";
+  openMenuEl=m; m.addEventListener("click",e=>e.stopPropagation());
+  m.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{const act=b.dataset.m;closeMenus();
+    if(act==="settings")openEditor(p);
+    if(act==="clone")cloneProfile(p.id);
+    if(act==="cookies")cookiesDialog(p);
+    if(act==="folders")assignFolderDialog([p.id]);
+    if(act==="automation")automationDialog([p.id]);
+    if(act==="share")shareDialog([p.id]);
+    if(act==="history")historyDialog(p);
+    if(act==="delete")deleteProfiles([p.id]);
+  });
+}
+function cloneProfile(pid){
+  const p=findProfile(pid); if(!p)return;
+  const c=JSON.parse(JSON.stringify(p)); c.id=uid(); c.name=p.name+" (clone)"; c.state="ready"; hist(c,"Cloned from "+p.name);
+  S.profiles.push(c); save(); renderProfiles(); toast("Profile cloned: "+c.name);
+}
+async function deleteProfiles(ids){
+  const ok=await confirmDialog("Delete profiles","Delete "+ids.length+" profile(s)? They move to Settings → Restore profiles and can be restored.","Delete");
+  if(!ok)return;
+  ids.forEach(id=>{const i=S.profiles.findIndex(p=>p.id===id); if(i>-1){const [p]=S.profiles.splice(i,1); p.state="ready"; S.deleted.push(p); selected.delete(id)}});
+  save(); renderProfiles(); toast(ids.length+" profile(s) deleted — restore from Settings");
+}
+function cookiesDialog(p){
+  const ov=openModal("🍪 Cookies — "+p.name,
+   '<div class="sub-text" style="margin-bottom:8px">'+p.cookies.length+' cookie(s) stored for this profile. Import accepts JSON, Netscape or plain text — paste below.</div>'+
+   '<div class="field"><label class="label">Import cookies (paste JSON / Netscape / text)</label><textarea class="textarea" id="ckPaste" placeholder=\'[{"name":"session","value":"abc","domain":".example.com"}]\'></textarea></div>'+
+   '<div class="log-box" id="ckLog">Ready.</div>',
+   '<button class="btn btn-danger" id="ckDelete">Delete cookies</button><button class="btn" id="ckExport">Export JSON</button><button class="btn" data-close="1">Close</button><button class="btn btn-primary" id="ckImport">Import</button>',true);
+  ov.querySelector("#ckImport").onclick=()=>{
+    const raw=ov.querySelector("#ckPaste").value.trim(); if(!raw){toast("Paste cookie data first",true);return}
+    let parsed=[];
+    try{const j=JSON.parse(raw); if(Array.isArray(j))parsed=j.map(c=>({name:c.name||"cookie",value:String(c.value||""),domain:c.domain||""}))}catch(e){}
+    if(!parsed.length){ raw.split("\n").filter(l=>l.trim()).forEach(l=>{const parts=l.split(/\s+/); if(parts.length>=7)parsed.push({name:parts[5],value:parts[6],domain:parts[0]}); else parsed.push({name:"cookie"+(parsed.length+1),value:l.slice(0,60),domain:""})}); }
+    p.cookies=p.cookies.concat(parsed); hist(p,"Imported "+parsed.length+" cookies"); save();
+    ov.querySelector("#ckLog").textContent="Imported "+parsed.length+" cookie(s). Total now: "+p.cookies.length; toast("Cookies imported: "+parsed.length);
+  };
+  ov.querySelector("#ckExport").onclick=()=>{download(p.name.replace(/\s+/g,"_")+"_cookies.json",JSON.stringify(p.cookies,null,2));toast("Cookies exported as JSON")};
+  ov.querySelector("#ckDelete").onclick=async()=>{if(await confirmDialog("Delete cookies","Delete all "+p.cookies.length+" cookies of this profile?","Delete cookies")){p.cookies=[];hist(p,"All cookies deleted");save();closeModal();toast("Cookies deleted")}};
+}
+function assignFolderDialog(ids){
+  let h='<div class="check-row"><button class="btn btn-sm" data-f="">— No folder (All profiles)</button></div>';
+  S.folders.forEach(f=>{h+='<div class="check-row"><button class="btn btn-sm" data-f="'+f.id+'">🗂 '+esc(f.name)+'</button></div>'});
+  const ov=openModal("Move to folder",h,'<button class="btn" data-close="1">Cancel</button>');
+  ov.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{ids.forEach(id=>{const p=findProfile(id);if(p){p.folderId=b.dataset.f;hist(p,"Moved to folder")}});save();closeModal();renderProfiles();toast(ids.length+" profile(s) moved")});
+}
+function automationDialog(ids){
+  const ov=openModal("🤖 Automation / Cookie Bot",
+   '<p class="sub-text" style="margin-bottom:10px">Cookie Bot visits sites to build a natural cookie history for '+ids.length+' selected profile(s). Runs as a simulated local session.</p>'+
+   '<div class="field"><label class="label">Sites to visit (one per line)</label><textarea class="textarea" id="autoSites">https://www.google.com\nhttps://www.youtube.com\nhttps://news.google.com</textarea></div>'+
+   '<div class="field"><label class="label">Warm-up minutes per profile</label><input class="input" id="autoMins" type="number" value="5" min="1" max="60" style="width:110px"></div>'+
+   '<div class="log-box hidden" id="autoLog"></div>',
+   '<button class="btn" data-close="1">Close</button><button class="btn btn-primary" id="autoStart">Start Cookie Bot</button>',true);
+  ov.querySelector("#autoStart").onclick=()=>{
+    const log=ov.querySelector("#autoLog"); log.classList.remove("hidden"); const sites=ov.querySelector("#autoSites").value.split("\n").filter(x=>x.trim());
+    let lines=["[bot] Starting for "+ids.length+" profile(s)…"];
+    ids.forEach(id=>{const p=findProfile(id); if(p){sites.forEach(s=>{p.cookies.push({name:"visited",value:s,domain:s.replace("https://","").replace("http://","")})}); hist(p,"Cookie Bot visited "+sites.length+" sites"); lines.push("[bot] "+p.name+": visited "+sites.length+" sites, +"+sites.length+" cookies")}});
+    lines.push("[bot] Done. Cookies saved to profile storage."); log.textContent=lines.join("\n"); save(); toast("Cookie Bot finished");
+  };
+}
+function shareDialog(ids){
+  const link="https://devxyzlogin.local/share/"+ids.map(i=>i.slice(2,8)).join("-");
+  const ov=openModal("↗ Share profile(s)",
+   '<div class="field"><label class="label">Invite by email</label><input class="input" id="shEmail" type="email" placeholder="teammate@email.com" style="width:100%"></div>'+
+   '<div class="field"><label class="label">Permission</label><select class="select" id="shRole"><option>can edit</option><option>can view</option></select></div>'+
+   '<div class="field"><label class="label">Share link</label><div class="code-block">'+esc(link)+'</div></div>',
+   '<button class="btn" id="shCopy">Copy link</button><button class="btn btn-primary" id="shSend">Send invite</button>');
+  ov.querySelector("#shCopy").onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(link);toast("Share link copied")};
+  ov.querySelector("#shSend").onclick=()=>{const em=ov.querySelector("#shEmail").value.trim(); if(!em){toast("Enter an email first",true);return} S.members.push({email:em,role:ov.querySelector("#shRole").value}); ids.forEach(id=>{const p=findProfile(id);if(p)hist(p,"Shared with "+em)}); save(); closeModal(); toast("Invite sent to "+em+" — added to Members")};
+}
+function historyDialog(p){
+  openModal("🕘 History — "+p.name,'<div class="history-list">'+(p.history||[]).map(h=>"<span>• "+esc(h.t)+" — "+esc(h.a)+"</span>").join("")+'</div>','<button class="btn" data-close="1">Close</button>');
+}
+/* ---------- run / stop ---------- */
+function toggleRun(pid){
+  const p=findProfile(pid); if(!p)return;
+  if(p.state==="running"){p.state="ready"; hist(p,"Browser stopped"); save(); renderProfiles(); toast("Stopped: "+p.name); return}
+  p.state="running"; hist(p,"Browser launched"); save(); renderProfiles(); openRunModal(p);
+}
+function openRunModal(p){
+  const fp=p.fp;
+  const body='<p class="sub-text" style="margin-bottom:10px">Simulated Orbita-style browser session running locally in this dashboard. The real DevxyzLogin Android/desktop browser applies this fingerprint at launch.</p>'+
+   '<div class="fp-preview">'+
+   "Profile: "+esc(p.name)+"\nUser-Agent: "+esc(fp.ua)+"\nScreen: "+esc(fp.screen)+" · Platform: "+esc(fp.platform)+"\nTimezone: "+esc(fp.timezoneAuto?"Auto (from IP) → "+fp.timezone:fp.timezone)+"\nLanguage: "+esc(fp.languages.join(", "))+"\nWebGL vendor: "+esc(fp.webglVendor)+"\nWebGL renderer: "+esc(fp.webglRenderer)+"\nCanvas: "+esc(fp.canvas)+" · AudioContext: "+esc(fp.audioContext)+" · ClientRects: "+esc(fp.clientRects)+"\nWebRTC: "+esc(fp.webrtc)+"\nProxy / IP: "+proxyLabel(p).replace(/<[^>]+>/g,"")+"\nCookies stored: "+p.cookies.length+" · Extensions: "+(p.extensions.join(", ")||"none")+
+   '</div>'+
+   '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><a class="btn btn-sm" href="https://iphey.com" target="_blank" rel="noopener">Check on iphey.com ↗</a><a class="btn btn-sm" href="https://pixelscan.net" target="_blank" rel="noopener">Check on pixelscan.net ↗</a></div>';
+  openModal("▶ Running — "+p.name,body,'<button class="btn btn-danger" id="runStopBtn">■ Stop browser</button><button class="btn" data-close="1">Keep running in background</button>',true)
+   .querySelector("#runStopBtn").onclick=()=>{p.state="ready";hist(p,"Browser stopped");save();closeModal();renderProfiles();toast("Stopped: "+p.name)};
+}
+/* ---------- bulk actions ---------- */
+$("#bulkBar").addEventListener("click",async e=>{
+  const b=e.target.closest("[data-bulk]"); if(!b)return; const act=b.dataset.bulk; const ids=[...selected];
+  if(act==="clear"){selected.clear();renderProfiles();return}
+  if(!ids.length)return;
+  if(act==="run")ids.forEach(id=>{const p=findProfile(id);p.state="running";hist(p,"Bulk run")});
+  if(act==="stop")ids.forEach(id=>{const p=findProfile(id);p.state="ready";hist(p,"Bulk stop")});
+  if(act==="clone"){ids.forEach(id=>cloneProfile(id));return}
+  if(act==="export"){download("devxyzlogin_profiles.json",JSON.stringify(ids.map(findProfile),null,2));toast("Exported "+ids.length+" profile(s) as JSON");return}
+  if(act==="fingerprint"){ids.forEach(id=>{const p=findProfile(id);const os=p.fp.os;p.fp={...genFingerprint(os)};hist(p,"Fingerprint updated")});save();renderProfiles();toast("Fingerprints updated for "+ids.length+" profile(s)");return}
+  if(act==="delete"){deleteProfiles(ids);return}
+  if(act==="transfer"){shareDialog(ids);return}
+  if(act==="automation"){automationDialog(ids);return}
+  if(act==="folder"){assignFolderDialog(ids);return}
+  save(); renderProfiles();
+});
+/* ---------- add profile dropdown ---------- */
+$("#addProfileCaret").onclick=e=>{e.stopPropagation();$("#addDropdown").classList.toggle("hidden")};
+$("#addProfileBtn").onclick=()=>openEditor(null);
+document.addEventListener("click",e=>{if(!e.target.closest(".split"))$("#addDropdown").classList.add("hidden")});
+$("#addDropdown").addEventListener("click",e=>{
+  const b=e.target.closest("[data-add]"); if(!b)return; $("#addDropdown").classList.add("hidden");
+  if(b.dataset.add==="custom")openEditor(null);
+  if(b.dataset.add==="quick")quickProfile();
+  if(b.dataset.add==="bulk")bulkCreateDialog();
+});
+$("#quickAddBtn").onclick=()=>quickProfile();
+function quickProfile(){
+  const p=makeProfile("Quick profile "+(S.profiles.length+1)); S.profiles.push(p); save(); renderProfiles(); toast("Quick profile created: "+p.name);
+}
+async function bulkCreateDialog(){
+  const nStr=await promptDialog("Bulk create profiles","How many? (1–30)","","Create");
+  if(nStr===null)return; let n=parseInt(nStr,10); if(isNaN(n)||n<1)n=1; if(n>30)n=30;
+  const prefix=await promptDialog("Bulk create profiles","Name prefix","Bulk profile","Create "+n);
+  if(prefix===null)return;
+  for(let i=0;i<n;i++)S.profiles.push(makeProfile(prefix+" "+(i+1)));
+  save(); renderProfiles(); toast(n+" profiles created");
+}
+</script>
+<script>
+/* ---------- profile editor (all GoLogin tabs) ---------- */
+function closeEditor(){const e=$("#editorOverlay");if(e)e.remove();editorCtx=null}
+function openEditor(existing){
+  closeEditor();
+  const isNew=!existing;
+  const draft=existing?JSON.parse(JSON.stringify(existing)):makeProfile("Untitled profile");
+  editorCtx={draft:draft,isNew:isNew,tab:"overview"};
+  const ov=document.createElement("div"); ov.className="editor-overlay"; ov.id="editorOverlay";
+  ov.innerHTML='<div class="editor-panel">'+
+   '<div class="editor-head"><div class="editor-title">'+(isNew?"Create profile":"Profile Settings")+' — <span id="edTitleName">'+esc(draft.name)+'</span></div>'+
+   '<button class="icon-btn" style="margin-left:auto" id="edClose">✕</button></div>'+
+   '<div class="tabs" id="edTabs">'+["overview","proxy","timezone","extensions","bookmarks","geolocation","advanced"].map(t=>'<button class="tab'+(t==="overview"?" active":"")+'" data-etab="'+t+'">'+t[0].toUpperCase()+t.slice(1)+'</button>').join("")+'</div>'+
+   '<div class="editor-body"><div class="editor-main" id="edMain"></div>'+
+   '<div class="editor-side"><div class="card"><div class="section-title">Profile Summary</div><div class="summary-list" id="edSummary"></div></div></div></div>'+
+   '<div class="modal-foot"><button class="btn" id="edCancel">Cancel</button><button class="btn btn-primary" id="edSave">'+(isNew?"Create profile":"Save changes")+'</button></div>'+
+   '</div>';
+  $("#overlayRoot").appendChild(ov);
+  ov.querySelector("#edClose").onclick=closeEditor; ov.querySelector("#edCancel").onclick=closeEditor;
+  ov.querySelector("#edTabs").addEventListener("click",e=>{const b=e.target.closest("[data-etab]");if(!b)return;editorCtx.tab=b.dataset.etab;ov.querySelectorAll("[data-etab]").forEach(x=>x.classList.toggle("active",x===b));renderEdTab()});
+  ov.querySelector("#edSave").onclick=saveEditor;
+  renderEdTab();
+}
+function edSummary(){
+  const d=editorCtx.draft, fp=d.fp;
+  const rows=[["Name",d.name],["OS",fp.os],["Browser",fp.browserVersion],["User-Agent",fp.ua],["Screen",fp.screen],["Timezone",fp.timezoneAuto?"Auto from IP ("+fp.timezone+")":fp.timezone],["Language",fp.languages.join(", ")],["Platform",fp.platform],["CPU / RAM",fp.cpu+" cores / "+fp.ram+" GB"],["Canvas",fp.canvas],["WebGL",fp.webgl],["WebRTC",fp.webrtc],["Geolocation",fp.geoMode+(fp.geoAuto?" · auto from IP":" · "+fp.geoLat+","+fp.geoLong)],["Proxy",d.proxy.mode==="your"?(d.proxy.host||"—")+":"+(d.proxy.port||"—"):d.proxy.mode==="builtin"?"DevxyzLogin ("+(d.proxy.buyCountry||"US")+")":d.proxy.proxyId?"Saved proxy":"Without proxy"],["Extensions",d.extensions.length?d.extensions.join(", "):"none"],["Seed","#"+fp.seed]];
+  $("#edSummary").innerHTML=rows.map(r=>'<div class="summary-row"><span class="summary-k">'+esc(r[0])+'</span><span class="summary-v">'+esc(r[1])+'</span></div>').join("");
+  $("#edTitleName").textContent=d.name;
+}
+function bindFpInputs(root){
+  root.querySelectorAll("[data-fp]").forEach(el=>{
+    el.onchange=()=>{const k=el.dataset.fp;let v=el.type==="checkbox"?el.checked:el.value;
+      if(["cpu","ram","mediaVideo","mediaAudioIn","mediaAudioOut"].includes(k))v=parseInt(v,10)||0;
+      editorCtx.draft.fp[k]=v; edSummary()};
+    el.oninput=()=>{if(el.type==="text"||el.tagName==="TEXTAREA"){const k=el.dataset.fp;editorCtx.draft.fp[k]=el.value;edSummary()}};
+  });
+  root.querySelectorAll("[data-prof]").forEach(el=>{el.oninput=()=>{editorCtx.draft[el.dataset.prof]=el.value;edSummary()};el.onchange=()=>{editorCtx.draft[el.dataset.prof]=el.value;edSummary()}});
+}
+function toggleHTML(on){return '<button class="toggle'+(on?" on":"")+'" data-tgl="1"></button>'}
+function wireToggle(el,fn){el.onclick=()=>{el.classList.toggle("on");fn(el.classList.contains("on"));edSummary()}}
+function renderEdTab(){
+  const d=editorCtx.draft, fp=d.fp, main=$("#edMain"), tab=editorCtx.tab;
+  if(tab==="overview"){
+    main.innerHTML=
+     '<div class="field"><label class="label">Profile name</label><input class="input" data-prof="name" style="width:100%" value="'+esc(d.name)+'"></div>'+
+     '<div class="field"><label class="label">Operating system'+(editorCtx.isNew?"":" — locked after creation")+'</label><div class="os-grid">'+
+      OS_LIST.map(os=>'<button class="os-card'+(fp.os===os?" sel":"")+'" data-os="'+os+'" '+(editorCtx.isNew?"":"disabled")+'>'+({"Windows 11":"🪟","Windows 10":"🪟","Mac Intel":"🍎","Mac ARM":"🍎","Linux":"🐧","Android":"🤖"}[os])+'<span class="os-ico"></span>'+os+(editorCtx.isNew?"":'<span class="os-lock">🔒 locked</span>')+'</button>').join("")+'</div></div>'+
+     '<div class="form-row"><div class="form-col"><div class="field"><label class="label">Folder</label><select class="select" id="edFolder" style="width:100%"><option value="">All profiles</option>'+S.folders.map(f=>'<option value="'+f.id+'"'+(d.folderId===f.id?" selected":"")+'>'+esc(f.name)+'</option>').join("")+'</select></div></div>'+
+     '<div class="form-col"><div class="field"><label class="label">Status field</label><select class="select" id="edStatusField" style="width:100%">'+STATUS_FIELDS.map(s=>'<option'+(d.statusField.text===s.text?" selected":"")+'>'+esc(s.text)+'</option>').join("")+'</select></div></div></div>'+
+     '<div class="field"><label class="label">Notes</label><textarea class="textarea" data-prof="notes" placeholder="Notes about this profile…">'+esc(d.notes)+'</textarea></div>'+
+     '<button class="btn btn-primary" id="edNewFp">🎲 New Fingerprint</button> <span class="sub-text">Generates a fresh, randomized-but-consistent fingerprint for this OS (seed #<span id="edSeed">'+fp.seed+'</span>).</span>';
+    main.querySelectorAll("[data-os]").forEach(b=>b.onclick=()=>{if(!editorCtx.isNew)return;d.fp={...genFingerprint(b.dataset.os)};renderEdTab()});
+    main.querySelector("#edFolder").onchange=e=>{d.folderId=e.target.value};
+    main.querySelector("#edStatusField").onchange=e=>{d.statusField={...STATUS_FIELDS.find(s=>s.text===e.target.value)}};
+    main.querySelector("#edNewFp").onclick=()=>{const os=d.fp.os;d.fp={...genFingerprint(os)};renderEdTab();toast("New fingerprint generated (seed #"+d.fp.seed+")")};
+    bindFpInputs(main);
+  }
+  if(tab==="proxy"){
+    const px=d.proxy;
+    main.innerHTML=
+     '<div class="field"><label class="label">Proxy mode</label><div class="radio-row">'+
+      '<span class="radio-pill'+(px.mode==="none"?" sel":"")+'" data-pmode="none">Without proxy</span>'+
+      '<span class="radio-pill'+(px.mode==="builtin"?" sel":"")+'" data-pmode="builtin">DevxyzLogin proxy</span>'+
+      '<span class="radio-pill'+(px.mode==="your"?" sel":"")+'" data-pmode="your">Your proxy</span></div></div>'+
+     '<div class="field"><label class="label">Use a saved proxy (shared list)</label><select class="select" id="edSavedProxy" style="width:100%"><option value="">— none —</option>'+S.proxies.map(x=>'<option value="'+x.id+'"'+(px.proxyId===x.id?" selected":"")+'>'+esc(x.name)+" ("+esc(x.type)+" "+esc(x.host)+":"+esc(x.port)+")"+'</option>').join("")+'</select></div>'+
+     '<div id="pxBuiltin" class="'+(px.mode==="builtin"?"":"hidden")+'"><div class="field"><label class="label">Country</label><select class="select" id="edBuyCountry" style="width:100%">'+COUNTRIES.map(c=>'<option value="'+c[0]+'"'+(px.buyCountry===c[0]?" selected":"")+'>'+c[2]+" "+c[1]+'</option>').join("")+'</select></div></div>'+
+     '<div id="pxYour" class="'+(px.mode==="your"?"":"hidden")+'">'+
+      '<div class="form-row"><div class="form-col"><div class="field"><label class="label">Host</label><input class="input" id="edPxHost" style="width:100%" placeholder="123.45.67.89" value="'+esc(px.host)+'"></div></div>'+
+      '<div class="form-col"><div class="field"><label class="label">Port</label><input class="input" id="edPxPort" style="width:100%" placeholder="8080" value="'+esc(px.port)+'"></div></div>'+
+      '<div class="form-col"><div class="field"><label class="label">Type</label><select class="select" id="edPxType" style="width:100%">'+["HTTP","HTTPS","SOCKS4","SOCKS5"].map(t=>'<option'+(px.type===t?" selected":"")+'>'+t+'</option>').join("")+'</select></div></div></div>'+
+      '<div class="form-row"><div class="form-col"><div class="field"><label class="label">Login</label><input class="input" id="edPxLogin" style="width:100%" value="'+esc(px.login)+'"></div></div>'+
+      '<div class="form-col"><div class="field"><label class="label">Password</label><input class="input" id="edPxPass" type="password" style="width:100%" value="'+esc(px.password)+'"></div></div></div>'+
+      '<button class="btn" id="edPxTest">Test proxy</button> <span class="sub-text" id="edPxTestOut">Validates host / port / type format locally.</span></div>';
+    main.querySelectorAll("[data-pmode]").forEach(b=>b.onclick=()=>{d.proxy.mode=b.dataset.pmode;renderEdTab()});
+    main.querySelector("#edSavedProxy").onchange=e=>{d.proxy.proxyId=e.target.value;if(e.target.value){const x=S.proxies.find(y=>y.id===e.target.value);d.proxy.ip=x.ip;d.proxy.flag=x.flag;if(d.proxy.mode==="none")d.proxy.mode="your"}edSummary()};
+    const bc=main.querySelector("#edBuyCountry"); if(bc)bc.onchange=e=>{const c=COUNTRIES.find(x=>x[0]===e.target.value);d.proxy.buyCountry=c[0];d.proxy.flag=c[2];d.proxy.country=c[1];d.proxy.ip=c[3]+randInt(2,250);edSummary()};
+    const bind=(id,key)=>{const el=main.querySelector(id);if(el)el.oninput=()=>{d.proxy[key]=el.value;edSummary()}};
+    bind("#edPxHost","host");bind("#edPxPort","port");bind("#edPxLogin","login");bind("#edPxPass","password");
+    const tp=main.querySelector("#edPxType"); if(tp)tp.onchange=e=>{d.proxy.type=e.target.value;edSummary()};
+    const test=main.querySelector("#edPxTest"); if(test)test.onclick=()=>{
+      const host=d.proxy.host.trim(), port=parseInt(d.proxy.port,10), out=main.querySelector("#edPxTestOut");
+      const hostOk=/^[a-zA-Z0-9.-]+$/.test(host)&&host.includes("."), portOk=port>=1&&port<=65535;
+      if(hostOk&&portOk){d.proxy.flag="🌐";d.proxy.ip=/^\d+\.\d+\.\d+\.\d+$/.test(host)?host:d.proxy.ip||"";out.textContent="✓ Format valid — "+d.proxy.type+" "+host+":"+port+" looks correct (format check only).";toast("Proxy format valid")}
+      else{out.textContent="✗ Invalid: check host (domain or IP) and port (1–65535).";toast("Proxy format invalid",true)}
+      edSummary()};
+  }
+  if(tab==="timezone"){
+    main.innerHTML='<div class="check-row">'+toggleHTML(fp.timezoneAuto)+'<span><strong>Fill timezone based on external IP</strong><br><span class="sub-text">Default ON — timezone follows the proxy IP location.</span></span></div>'+
+     '<div class="field" style="margin-top:12px"><label class="label">Manual timezone</label><select class="select" data-fp="timezone" style="width:100%" '+(fp.timezoneAuto?"disabled":"")+'>'+TIMEZONES.map(z=>'<option'+(fp.timezone===z?" selected":"")+'>'+z+'</option>').join("")+'</select></div>';
+    wireToggle(main.querySelector("[data-tgl]"),on=>{fp.timezoneAuto=on;renderEdTab()}); bindFpInputs(main);
+  }
+  if(tab==="extensions"){
+    main.innerHTML='<div class="field"><label class="label">Add extensions — search &amp; install</label><input class="input" id="extSearch" style="width:100%" placeholder="Search extensions…"></div><div id="extList"></div>'+
+     '<div style="margin-top:14px"><button class="btn" id="extUpload">⬆ Upload custom extension (unpacked folder)</button></div>';
+    const renderList=()=>{
+      const q=(main.querySelector("#extSearch").value||"").toLowerCase();
+      const all=[...new Set([...EXT_CATALOG,...d.extensions])].filter(n=>n.toLowerCase().includes(q));
+      main.querySelector("#extList").innerHTML=all.map(n=>{const inst=d.extensions.includes(n);
+        return '<div class="ext-row"><span style="flex:1">🧩 '+esc(n)+'</span>'+
+        '<label class="sub-text"><input type="checkbox" data-extflag="'+esc(n)+'" '+(S.globalExtFlags.includes(n)?"checked":"")+'> add to every new profile</label>'+
+        (inst?'<button class="btn btn-sm btn-danger" data-extremove="'+esc(n)+'">Remove</button>':'<button class="btn btn-sm btn-primary" data-extadd="'+esc(n)+'">Install</button>')+'</div>'}).join("")||'<div class="empty-state">No extensions match.</div>';
+      main.querySelectorAll("[data-extadd]").forEach(b=>b.onclick=()=>{d.extensions.push(b.dataset.extadd);renderList();edSummary()});
+      main.querySelectorAll("[data-extremove]").forEach(b=>b.onclick=()=>{d.extensions=d.extensions.filter(x=>x!==b.dataset.extremove);renderList();edSummary()});
+      main.querySelectorAll("[data-extflag]").forEach(c=>c.onchange=()=>{if(c.checked&&!S.globalExtFlags.includes(c.dataset.extflag))S.globalExtFlags.push(c.dataset.extflag);if(!c.checked)S.globalExtFlags=S.globalExtFlags.filter(x=>x!==c.dataset.extflag);save();toast(c.checked?"Will be added to every new profile":"Removed from new-profile defaults")});
+    };
+    renderList();
+    main.querySelector("#extSearch").oninput=renderList;
+    main.querySelector("#extUpload").onclick=async()=>{const n=await promptDialog("Upload custom extension","Unpacked extension folder name","","Add extension");if(n&&n.trim()){d.extensions.push(n.trim()+" (custom)");renderList();edSummary();toast("Custom extension added")}};
+  }
+  if(tab==="bookmarks"){
+    main.innerHTML='<div class="field"><label class="label">Bookmarks — one per line</label><textarea class="textarea" data-prof="bookmarks" style="min-height:180px" placeholder="Folder::Bookmark name::https://example.com\nName::https://example.com\nhttps://example.com">'+esc(d.bookmarks)+'</textarea></div><p class="sub-text">Formats: <span class="kbd">folder::name::url</span> · <span class="kbd">name::url</span> · <span class="kbd">url</span></p>';
+    bindFpInputs(main);
+  }
+  if(tab==="geolocation"){
+    main.innerHTML='<div class="field"><label class="label">Geolocation permission</label><div class="radio-row">'+["Prompt","Allow","Block"].map(m=>'<span class="radio-pill'+(fp.geoMode===m?" sel":"")+'" data-geo="'+m+'">'+m+'</span>').join("")+'</div></div>'+
+     '<div class="check-row">'+toggleHTML(fp.geoAuto)+'<span><strong>Fill geolocation based on external IP</strong> (default ON)</span></div>'+
+     '<div class="form-row" style="margin-top:10px"><div class="form-col"><div class="field"><label class="label">Latitude</label><input class="input" data-fp="geoLat" style="width:100%" value="'+esc(fp.geoLat)+'" '+(fp.geoAuto?"disabled":"")+'></div></div>'+
+     '<div class="form-col"><div class="field"><label class="label">Longitude</label><input class="input" data-fp="geoLong" style="width:100%" value="'+esc(fp.geoLong)+'" '+(fp.geoAuto?"disabled":"")+'></div></div></div>';
+    main.querySelectorAll("[data-geo]").forEach(b=>b.onclick=()=>{fp.geoMode=b.dataset.geo;renderEdTab()});
+    wireToggle(main.querySelector("[data-tgl]"),on=>{fp.geoAuto=on;renderEdTab()}); bindFpInputs(main);
+  }
+  if(tab==="advanced"){
+    const sel=(key,opts,val)=>'<select class="select" data-fp="'+key+'" style="width:100%">'+opts.map(o=>'<option'+(val===o?" selected":"")+'>'+o+'</option>').join("")+'</select>';
+    main.innerHTML=
+     '<div class="section-title">Navigator</div>'+
+     '<div class="field"><label class="label">User-Agent (auto from OS, editable)</label><input class="input" data-fp="ua" style="width:100%" value="'+esc(fp.ua)+'"></div>'+
+     '<div class="form-row"><div class="form-col"><div class="field"><label class="label">Browser version</label><input class="input" data-fp="browserVersion" style="width:100%" value="'+esc(fp.browserVersion)+'"></div></div>'+
+     '<div class="form-col"><div class="field"><label class="label">Screen resolution</label>'+sel("screen",RESOLUTIONS,fp.screen)+'</div></div></div>'+
+     '<div class="form-row"><div class="form-col"><div class="field"><label class="label">Languages</label><select class="select" id="edLang" style="width:100%">'+LANGUAGES.map(l=>'<option'+(fp.languages[0]===l?" selected":"")+'>'+l+'</option>').join("")+'</select></div></div>'+
+     '<div class="form-col"><div class="field"><label class="label">Platform</label><input class="input" data-fp="platform" style="width:100%" value="'+esc(fp.platform)+'"></div></div></div>'+
+     '<div class="form-row"><div class="form-col"><div class="field"><label class="label">CPU cores (hardwareConcurrency)</label><input class="input" data-fp="cpu" type="number" min="1" max="32" style="width:100%" value="'+fp.cpu+'"></div></div>'+
+     '<div class="form-col"><div class="field"><label class="label">RAM (deviceMemory, GB)</label><input class="input" data-fp="ram" type="number" min="1" max="64" style="width:100%" value="'+fp.ram+'"></div></div>'+
+     '<div class="form-col"><div class="check-row" style="margin-top:22px"><input type="checkbox" class="row-check" data-fp="doNotTrack" '+(fp.doNotTrack?"checked":"")+'><span>Do Not Track</span></div></div></div>'+
+     '<div class="section-title">Fonts</div><div class="check-row">'+toggleHTML(fp.fontsMasking)+'<span>Fonts masking <span class="sub-text">(per-OS font set: '+esc(fp.fonts.join(", "))+')</span></span></div>'+
+     '<div class="section-title" style="margin-top:14px">Media devices</div><div class="form-row">'+
+     '<div class="form-col"><div class="field"><label class="label">Video inputs</label><input class="input" data-fp="mediaVideo" type="number" min="0" max="4" style="width:100%" value="'+fp.mediaVideo+'"></div></div>'+
+     '<div class="form-col"><div class="field"><label class="label">Audio inputs</label><input class="input" data-fp="mediaAudioIn" type="number" min="0" max="4" style="width:100%" value="'+fp.mediaAudioIn+'"></div></div>'+
+     '<div class="form-col"><div class="field"><label class="label">Audio outputs</label><input class="input" data-fp="mediaAudioOut" type="number" min="0" max="4" style="width:100%" value="'+fp.mediaAudioOut+'"></div></div></div>'+
+     '<div class="section-title">Hardware fingerprint</div><div class="form-row">'+
+     '<div class="form-col"><div class="field"><label class="label">Canvas</label>'+sel("canvas",["Off","Block","Noise"],fp.canvas)+'</div></div>'+
+     '<div class="form-col"><div class="field"><label class="label">WebGL</label>'+sel("webgl",["Off","Block","Noise"],fp.webgl)+'</div></div></div>'+
+     '<div class="form-row"><div class="form-col"><div class="field"><label class="label">AudioContext</label>'+sel("audioContext",["Off","Block","Noise"],fp.audioContext)+'</div></div>'+
+     '<div class="form-col"><div class="field"><label class="label">ClientRects</label>'+sel("clientRects",["Off","Block","Noise"],fp.clientRects)+'</div></div></div>'+
+     '<div class="form-row"><div class="form-col"><div class="field"><label class="label">WebGL vendor</label><input class="input" data-fp="webglVendor" style="width:100%" value="'+esc(fp.webglVendor)+'"></div></div>'+
+     '<div class="form-col"><div class="field"><label class="label">WebGL renderer</label><input class="input" data-fp="webglRenderer" style="width:100%" value="'+esc(fp.webglRenderer)+'"></div></div></div>'+
+     '<div class="section-title">WebRTC</div><div class="field">'+sel("webrtc",["Based on IP","Off","Disabled"],fp.webrtc)+'</div>'+
+     '<div class="section-title">Storage options</div>'+
+     '<div class="check-row"><input type="checkbox" class="row-check" id="edStoreCookies" '+(fp.storageCookies?"checked":"")+'><span>Save cookies between sessions</span></div>'+
+     '<div class="check-row"><input type="checkbox" class="row-check" id="edStoreLocal" '+(fp.storageLocal?"checked":"")+'><span>Save localStorage / IndexedDB between sessions</span></div>';
+    main.querySelector("#edLang").onchange=e=>{fp.languages=[e.target.value];edSummary()};
+    main.querySelectorAll("[data-tgl]").forEach(t=>wireToggle(t,on=>{fp.fontsMasking=on}));
+    main.querySelector("#edStoreCookies").onchange=e=>{fp.storageCookies=e.target.checked};
+    main.querySelector("#edStoreLocal").onchange=e=>{fp.storageLocal=e.target.checked};
+    bindFpInputs(main);
+  }
+  edSummary();
+}
+function saveEditor(){
+  const d=editorCtx.draft;
+  if(!d.name.trim()){toast("Profile name is required",true);return}
+  if(editorCtx.isNew){
+    d.extensions=[...new Set([...S.globalExtFlags,...d.extensions])];
+    hist(d,"Profile created"); S.profiles.push(d); toast("Profile created: "+d.name);
+  }else{
+    const i=S.profiles.findIndex(p=>p.id===d.id); if(i>-1){d.history=d.history||[];hist(d,"Settings updated");S.profiles[i]=d}
+    toast("Profile saved: "+d.name);
+  }
+  save(); closeEditor(); renderProfiles();
+}
+</script>
+<script>
+/* ---------- proxies page ---------- */
+function renderProxies(){
+  $("#freeLocations").innerHTML=COUNTRIES.slice(0,5).map(c=>'<span class="tag-chip" style="background:var(--accent)">'+c[2]+" "+esc(c[1])+" — free datacenter</span>").join("");
+  const tb=$("#proxyRows");
+  $("#proxiesEmpty").classList.toggle("hidden",S.proxies.length>0);
+  tb.innerHTML=S.proxies.map(x=>'<tr><td class="cell-name">'+esc(x.name)+'</td><td>'+esc(x.type)+'</td><td>'+esc(x.host)+'</td><td>'+esc(x.port)+'</td><td><span class="flag">'+esc(x.flag||"🌐")+'</span> '+esc(x.country||"")+'</td><td>'+esc(x.ip||"")+'</td>'+
+   '<td style="white-space:nowrap"><button class="btn btn-sm" data-pxedit="'+x.id+'">Edit</button> <button class="btn btn-sm btn-danger" data-pxdel="'+x.id+'">Delete</button></td></tr>').join("");
+  tb.querySelectorAll("[data-pxedit]").forEach(b=>b.onclick=()=>proxyDialog(S.proxies.find(x=>x.id===b.dataset.pxedit)));
+  tb.querySelectorAll("[data-pxdel]").forEach(b=>b.onclick=async()=>{if(await confirmDialog("Delete proxy","Delete this proxy from the shared list?","Delete")){S.proxies=S.proxies.filter(x=>x.id!==b.dataset.pxdel);save();renderProxies();toast("Proxy deleted")}});
+}
+function proxyDialog(existing){
+  const x=existing?{...existing}:{id:uid(),name:"",type:"SOCKS5",host:"",port:"8080",login:"",password:"",country:"United States",flag:"🇺🇸",ip:""};
+  const ov=openModal(existing?"Edit proxy":"Add proxy",
+   '<div class="field"><label class="label">Name</label><input class="input" id="pxName" style="width:100%" value="'+esc(x.name)+'"></div>'+
+   '<div class="form-row"><div class="form-col"><div class="field"><label class="label">Host</label><input class="input" id="pxHost" style="width:100%" value="'+esc(x.host)+'" placeholder="123.45.67.89"></div></div>'+
+   '<div class="form-col"><div class="field"><label class="label">Port</label><input class="input" id="pxPort" style="width:100%" value="'+esc(x.port)+'"></div></div>'+
+   '<div class="form-col"><div class="field"><label class="label">Type</label><select class="select" id="pxType" style="width:100%">'+["HTTP","HTTPS","SOCKS4","SOCKS5"].map(t=>'<option'+(x.type===t?" selected":"")+'>'+t+'</option>').join("")+'</select></div></div></div>'+
+   '<div class="form-row"><div class="form-col"><div class="field"><label class="label">Country</label><select class="select" id="pxCountry" style="width:100%">'+COUNTRIES.map(c=>'<option value="'+c[1]+'" data-flag="'+c[2]+'"'+(x.country===c[1]?" selected":"")+'>'+c[2]+" "+c[1]+'</option>').join("")+'</select></div></div>'+
+   '<div class="form-col"><div class="field"><label class="label">Login</label><input class="input" id="pxLogin" style="width:100%" value="'+esc(x.login||"")+'"></div></div>'+
+   '<div class="form-col"><div class="field"><label class="label">Password</label><input class="input" id="pxPass" type="password" style="width:100%" value="'+esc(x.password||"")+'"></div></div></div>',
+   '<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" id="pxSave">Save proxy</button>');
+  ov.querySelector("#pxSave").onclick=()=>{
+    x.name=ov.querySelector("#pxName").value.trim()||"Unnamed proxy"; x.host=ov.querySelector("#pxHost").value.trim(); x.port=ov.querySelector("#pxPort").value.trim();
+    x.type=ov.querySelector("#pxType").value; x.login=ov.querySelector("#pxLogin").value; x.password=ov.querySelector("#pxPass").value;
+    const cs=ov.querySelector("#pxCountry"); x.country=cs.value; x.flag=cs.selectedOptions[0].dataset.flag;
+    if(!x.host||!/^\d+$/.test(x.port)){toast("Host and a numeric port are required",true);return}
+    x.ip=/^\d+\.\d+\.\d+\.\d+$/.test(x.host)?x.host:x.ip||"";
+    if(existing){const i=S.proxies.findIndex(y=>y.id===x.id);S.proxies[i]=x}else S.proxies.push(x);
+    save(); closeModal(); renderProxies(); toast("Proxy saved — available in the profile editor");
+  };
+}
+$("#addProxyBtn").onclick=()=>proxyDialog(null);
+$$("[data-buy]").forEach(b=>b.onclick=async()=>{
+  const kind=b.dataset.buy; const gb=await promptDialog("Buy "+kind+" proxy","Traffic in GB (billed per-GB)","10","Continue");
+  if(gb===null)return; const c=pick(COUNTRIES);
+  S.proxies.push({id:uid(),name:kind+" — "+c[1],type:"SOCKS5",host:kind.toLowerCase()+".proxy.devxyz",port:"9000",login:"",password:"",country:c[1],flag:c[2],ip:c[3]+randInt(2,250)});
+  S.billing.unshift({t:nowStr(),a:"Bought "+gb+" GB "+kind+" proxy ("+c[1]+")"});
+  save(); renderProxies(); toast(kind+" proxy added ("+gb+" GB, "+c[1]+")");
+});
+/* ---------- AI assistant ---------- */
+function renderChat(){
+  const log=$("#chatLog");
+  log.innerHTML=S.chat.map(m=>'<div class="chat-msg '+m.who+'">'+esc(m.text)+'</div>').join("");
+  log.scrollTop=log.scrollHeight;
+}
+function aiSay(text){S.chat.push({who:"bot",text:text});save();renderChat()}
+function aiUser(text){S.chat.push({who:"user",text:text});save();renderChat()}
+function warmUp(kind,label){
+  const p=makeProfile(label+" warm-up "+(S.profiles.length+1));
+  p.tags=[{text:kind,color:pick(TAG_COLORS)}]; S.profiles.push(p); save();
+  aiSay("Created profile “"+p.name+"” ("+p.fp.os+", "+p.fp.countryName+" "+p.fp.ip+").\nStarting simulated warm-up run…");
+  const steps=["[run] Launching browser with fingerprint seed #"+p.fp.seed,"[run] Proxy connected: "+p.fp.flag+" "+p.fp.ip,"[run] Visiting home feed, scrolling slowly…","[run] Watching 3 posts/videos, liking 1…","[run] Session cookies saved ("+(p.cookies.length+4)+" cookies).","[run] Warm-up complete — profile is ready and marked Warming."];
+  let i=0; const iv=setInterval(()=>{ if(i<steps.length){aiSay(steps[i]); i++} else {p.statusField={...STATUS_FIELDS[1]}; p.cookies.push({name:"warmup",value:kind,domain:kind}); hist(p,"AI warm-up ("+kind+") completed"); save(); clearInterval(iv)} },450);
+  renderProfiles();
+}
+$("#templateChips").addEventListener("click",async e=>{
+  const b=e.target.closest("[data-tpl]"); if(!b)return; const tpl=b.dataset.tpl;
+  if(tpl==="batch"){
+    const nStr=await promptDialog("Batch Create Profiles","How many profiles? (1–30)","","Create");
+    if(nStr===null)return; let n=parseInt(nStr,10); if(isNaN(n)||n<1)n=1; if(n>30)n=30;
+    const prefix=await promptDialog("Batch Create Profiles","Name prefix","AI Batch","Create "+n+" profiles");
+    if(prefix===null)return;
+    for(let i=0;i<n;i++)S.profiles.push(makeProfile(prefix+" "+(i+1)));
+    save(); aiUser("Batch Create Profiles × "+n); aiSay("Done — created "+n+" profiles with prefix “"+prefix+"”, each with a unique randomized fingerprint. See All profiles."); renderProfiles(); return;
+  }
+  const map={social:["social","Facebook & Instagram"],tiktok:["tiktok","TikTok"],youtube:["youtube","YouTube"],shopping:["shopping","Shopping Simulation"],news:["news","News Reading"]};
+  const m=map[tpl]; aiUser(m[1]+" warm-up"); warmUp(m[0],m[1]);
+});
+function chatSendFn(){
+  const inp=$("#chatInput"); const v=inp.value.trim(); if(!v)return; inp.value=""; aiUser(v);
+  const m=v.match(/(\d+)\s+profiles?/i);
+  if(/creat|batch|gawa/i.test(v)&&m){let n=Math.min(30,Math.max(1,parseInt(m[1],10))); for(let i=0;i<n;i++)S.profiles.push(makeProfile("AI profile "+(S.profiles.length+1))); save(); aiSay("Created "+n+" new profiles with unique fingerprints. Check All profiles."); renderProfiles(); return}
+  if(/tiktok/i.test(v)){warmUp("tiktok","TikTok");return}
+  if(/facebook|instagram|social/i.test(v)){warmUp("social","Facebook & Instagram");return}
+  if(/youtube/i.test(v)){warmUp("youtube","YouTube");return}
+  aiSay("I can: Batch Create Profiles (try “Create 5 profiles”), run warm-ups for Facebook & Instagram, TikTok, YouTube, simulate Shopping or News Reading sessions. Pick a template chip above or describe the task.");
+}
+$("#chatSend").onclick=chatSendFn;
+$("#chatInput").addEventListener("keydown",e=>{if(e.key==="Enter")chatSendFn()});
+/* ---------- API & MCP ---------- */
+function renderApi(){
+  $("#apiTokenBox").textContent=S.apiToken;
+  $("#mcpConfig").textContent=JSON.stringify({mcpServers:{devxyzlogin:{command:"npx",args:["-y","@devxyzlogin/mcp-server"],env:{DEVXYZLOGIN_API_TOKEN:S.apiToken,DEVXYZLOGIN_API_URL:"https://api.devxyzlogin.local/v1"}}}},null,2);
+  const eps=[["GET","/v1/profiles","List all profiles"],["POST","/v1/profiles","Create a profile"],["GET","/v1/profiles/:id","Get one profile"],["PATCH","/v1/profiles/:id","Update fingerprint / proxy / tags"],["DELETE","/v1/profiles/:id","Delete a profile (goes to Restore)"],["POST","/v1/profiles/:id/start","Start browser profile"],["POST","/v1/profiles/:id/stop","Stop browser profile"],["GET","/v1/proxies","List shared proxies"],["POST","/v1/browser/connect","Get WebSocket / CDP endpoint for Puppeteer, Selenium, Playwright"]];
+  $("#endpointList").innerHTML=eps.map(e=>'<div class="endpoint-row"><span class="method">'+e[0]+'</span><span class="kbd">'+e[1]+'</span><span class="sub-text">'+e[2]+'</span></div>').join("");
+}
+$("#copyTokenBtn").onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(S.apiToken);toast("API token copied")};
+$("#copyMcpBtn").onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText($("#mcpConfig").textContent);toast("MCP config copied")};
+$("#regenTokenBtn").onclick=async()=>{if(await confirmDialog("Regenerate API token","The old token stops working immediately. Continue?","Regenerate")){S.apiToken="dl_"+Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,14);save();renderApi();toast("New API token generated")}};
+/* ---------- cloud android & proxy devices ---------- */
+function deviceFields(kind){
+  return kind==="cloud"
+   ? '<div class="field"><label class="label">Device name</label><input class="input" id="dvName" style="width:100%" placeholder="Cloud Phone 1"></div><div class="field"><label class="label">Android model</label><select class="select" id="dvModel" style="width:100%"><option>Samsung Galaxy S24</option><option>Google Pixel 8</option><option>Xiaomi 14</option><option>OnePlus 12</option></select></div><div class="field"><label class="label">Android version</label><select class="select" id="dvVer" style="width:100%"><option>Android 14</option><option>Android 13</option><option>Android 15</option></select></div>'
+   : '<div class="field"><label class="label">Device name</label><input class="input" id="dvName" style="width:100%" placeholder="My phone / Office PC"></div><div class="field"><label class="label">Device type</label><select class="select" id="dvModel" style="width:100%"><option>Android phone</option><option>Windows PC</option><option>Linux PC</option><option>Router</option></select></div><div class="field"><label class="label">Local IP / pairing code</label><input class="input" id="dvVer" style="width:100%" placeholder="192.168.1.50 or pairing code"></div>';
+}
+function renderDevices(kind){
+  const list=kind==="cloud"?S.cloudDevices:S.proxyDevices;
+  const wrap=kind==="cloud"?$("#cloudDeviceWrap"):$("#proxyDeviceWrap");
+  if(!list.length){wrap.innerHTML='<div class="device-empty"><span class="device-ico">'+(kind==="cloud"?"📱":"🖧")+'</span>No '+(kind==="cloud"?"cloud Android devices":"proxy devices")+' yet.<br>Click <strong>＋ Add device</strong> to create one.</div>';return}
+  wrap.innerHTML=list.map(dv=>'<div class="member-row"><span style="font-size:22px">'+(kind==="cloud"?"📱":"🖧")+'</span><span style="flex:1"><strong>'+esc(dv.name)+'</strong><br><span class="sub-text">'+esc(dv.model)+" · "+esc(dv.ver)+" · added "+esc(dv.added)+'</span></span><span class="badge badge-running"><span class="status-dot on"></span>online</span><button class="btn btn-sm btn-danger" data-dvdel="'+dv.id+'">Remove</button></div>').join("");
+  wrap.querySelectorAll("[data-dvdel]").forEach(b=>b.onclick=async()=>{if(await confirmDialog("Remove device","Remove this device from the list?","Remove")){const arr=kind==="cloud"?S.cloudDevices:S.proxyDevices;const i=arr.findIndex(x=>x.id===b.dataset.dvdel);arr.splice(i,1);save();renderDevices(kind);toast("Device removed")}});
+}
+function addDevice(kind){
+  const ov=openModal(kind==="cloud"?"Add Cloud Android device":"Add Proxy Device",deviceFields(kind),'<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" id="dvAdd">Add device</button>');
+  ov.querySelector("#dvAdd").onclick=()=>{
+    const name=ov.querySelector("#dvName").value.trim(); if(!name){toast("Device name is required",true);return}
+    const entry={id:uid(),name:name,model:ov.querySelector("#dvModel").value,ver:ov.querySelector("#dvVer").value,added:nowStr()};
+    (kind==="cloud"?S.cloudDevices:S.proxyDevices).push(entry); save(); closeModal(); renderDevices(kind); toast("Device added: "+name);
+  };
+}
+$("#addCloudDeviceBtn").onclick=()=>addDevice("cloud");
+$("#addProxyDeviceBtn").onclick=()=>addDevice("proxy");
+/* ---------- settings ---------- */
+function switchSettings(name){
+  $$("#settingsNav .nav-item").forEach(b=>b.classList.toggle("active",b.dataset.set===name));
+  $$(".settings-section").forEach(s=>s.classList.toggle("hidden",s.dataset.section!==name));
+}
+$("#settingsNav").addEventListener("click",e=>{const b=e.target.closest("[data-set]");if(b){switchSettings(b.dataset.set);renderSettings()}});
+function renderSettings(){
+  $("#setEmail").value=S.email; $("#setWorkspace").value=S.workspace; $("#accountEmailLabel").textContent=S.email;
+  const plans=[["Forever Free","$0",true,"3 profile slots · core fingerprint · 1 member"],["Professional","$24/mo",false,"100 profiles · team sharing · cloud launches · API 300 RPM"],["Business","$49/mo",false,"300 profiles · 10 members · API 500 RPM"],["Enterprise","$99/mo",false,"1,000 profiles · 1,000 shares · API 800 RPM"]];
+  $("#planCards").innerHTML=plans.map(pl=>'<div class="plan-option'+(pl[2]?" current":"")+'"><strong>'+pl[0]+'</strong><div class="plan-price">'+pl[1]+'</div><div class="sub-text">'+pl[3]+'</div>'+(pl[2]?'<span class="badge badge-running" style="margin-top:8px">Current plan</span>':'<button class="btn btn-sm btn-primary" data-upgrade="'+pl[0]+'" style="margin-top:8px">Upgrade</button>')+'</div>').join("");
+  $("#planCards").querySelectorAll("[data-upgrade]").forEach(b=>b.onclick=()=>toast("Checkout for "+b.dataset.upgrade+" is not wired in this local build — plan stays Forever Free."));
+  $("#billingHistory").innerHTML=S.billing.map(b=>"<span>• "+esc(b.t)+" — "+esc(b.a)+"</span>").join("")||"<span>No billing events yet.</span>";
+  $("#memberList").innerHTML=S.members.map((m,i)=>'<div class="member-row"><span style="flex:1"><strong>'+esc(m.email)+'</strong><br><span class="sub-text">'+esc(m.role)+'</span></span>'+(m.role!=="Owner"?'<button class="btn btn-sm btn-danger" data-memdel="'+i+'">Remove</button>':"")+'</div>').join("");
+  $("#memberList").querySelectorAll("[data-memdel]").forEach(b=>b.onclick=async()=>{if(await confirmDialog("Remove member","Remove "+S.members[+b.dataset.memdel].email+" from the workspace?","Remove")){S.members.splice(+b.dataset.memdel,1);save();renderSettings();toast("Member removed")}});
+  $("#twoFaToggle").classList.toggle("on",S.twoFA);
+  $("#sessionList").innerHTML=S.sessions.map(ss=>'<div class="session-row"><span style="flex:1"><strong>'+esc(ss.label)+'</strong><br><span class="sub-text">'+esc(ss.when)+'</span></span>'+(ss.current?'<span class="badge badge-running">Current</span>':'<button class="btn btn-sm btn-danger" data-sessdel="'+ss.id+'">Revoke</button>')+'</div>').join("");
+  $("#sessionList").querySelectorAll("[data-sessdel]").forEach(b=>b.onclick=()=>{S.sessions=S.sessions.filter(x=>x.id!==b.dataset.sessdel);save();renderSettings();toast("Session revoked")});
+  const rl=$("#restoreList");
+  rl.innerHTML=S.deleted.length?S.deleted.map(p=>'<div class="member-row"><span style="flex:1"><strong>'+esc(p.name)+'</strong><br><span class="sub-text">'+esc(p.fp.os)+" · deleted from list · "+p.cookies.length+' cookies</span></span><button class="btn btn-sm btn-green" data-restore="'+p.id+'">Restore</button><button class="btn btn-sm btn-danger" data-purge="'+p.id+'">Delete forever</button></div>').join(""):'<div class="empty-state">No deleted profiles to restore.</div>';
+  rl.querySelectorAll("[data-restore]").forEach(b=>b.onclick=()=>{const i=S.deleted.findIndex(p=>p.id===b.dataset.restore);const [p]=S.deleted.splice(i,1);S.profiles.push(p);save();renderSettings();renderProfiles();toast("Restored: "+p.name)});
+  rl.querySelectorAll("[data-purge]").forEach(b=>b.onclick=async()=>{if(await confirmDialog("Delete forever","This profile cannot be recovered. Continue?","Delete forever")){S.deleted=S.deleted.filter(p=>p.id!==b.dataset.purge);save();renderSettings();toast("Profile permanently deleted")}});
+}
+$("#saveOverviewBtn").onclick=()=>{S.email=$("#setEmail").value.trim()||S.email;S.workspace=$("#setWorkspace").value.trim()||S.workspace;save();renderSettings();toast("Workspace settings saved")};
+$("#promoApplyBtn").onclick=()=>{const v=$("#promoInput").value.trim();if(!v){toast("Enter a promo code first",true);return}S.billing.unshift({t:nowStr(),a:"Promo code applied: "+v});save();renderSettings();toast("Promo code applied: "+v)};
+$("#addMemberBtn").onclick=()=>{const em=$("#memberEmail").value.trim();if(!em||!em.includes("@")){toast("Enter a valid email",true);return}S.members.push({email:em,role:$("#memberRole").value});$("#memberEmail").value="";save();renderSettings();toast("Member added: "+em)};
+$("#twoFaToggle").onclick=()=>{S.twoFA=!S.twoFA;save();renderSettings();toast("Two-step verification "+(S.twoFA?"enabled":"disabled"))};
+/* ---------- init ---------- */
+applyTheme(); renderSettings(); showPage("profiles"); renderChat();
+</script>
+</body>
+</html>

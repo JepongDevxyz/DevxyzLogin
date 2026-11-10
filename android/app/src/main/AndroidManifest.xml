@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application
+        android:allowBackup="true"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.DevxyzLogin"
+        android:usesCleartextTraffic="true">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+          Browser isolation slots. WebView.setDataDirectorySuffix() gives ONE
+          data directory per PROCESS, so true per-profile isolation for an
+          unlimited number of profiles is impossible with WebView. We declare
+          3 browser processes (:p1/:p2/:p3); each profile is permanently
+          assigned one slot (see ProfileStore.slotFor) and profiles that share
+          a slot share WebView storage. This is documented, not faked.
+        -->
+        <activity
+            android:name=".browser.BrowserActivityP1"
+            android:exported="false"
+            android:process=":p1"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+        <activity
+            android:name=".browser.BrowserActivityP2"
+            android:exported="false"
+            android:process=":p2"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+        <activity
+            android:name=".browser.BrowserActivityP3"
+            android:exported="false"
+            android:process=":p3"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+    </application>
+</manifest>
