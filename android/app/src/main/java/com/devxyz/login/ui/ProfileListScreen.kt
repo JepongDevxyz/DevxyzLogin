@@ -2,6 +2,7 @@ package com.devxyz.login.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,13 +37,13 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -67,20 +68,29 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.devxyz.login.data.ProfileStore
+import com.devxyz.login.model.CaptureData
+import com.devxyz.login.model.Countries
+import com.devxyz.login.model.DefaultBookmarks
 import com.devxyz.login.model.FingerprintGenerator
 import com.devxyz.login.model.Folder
 import com.devxyz.login.model.OsOptions
 import com.devxyz.login.model.Profile
+import com.devxyz.login.model.ProxyConfig
 import kotlinx.coroutines.delay
 
 /**
- * Profile list (GoLogin capture parity):
+ * Profile list (GoLogin capture parity + Android-app evidence):
  * - State dot semantics: ready = hollow grey circle, running = green dot,
  *   launching = blue dot + "downloading profile..." (capture §0/§3).
- * - Run is a green-outlined pill opening the Manual/API control choice
- *   (capture §0); running rows show View (green outline) + Stop (red outline).
+ * - Run is a SOLID green filled button (GoLogin Android Play screenshot);
+ *   it opens the Manual/API control choice (capture §0); running rows
+ *   show View (green outline) + Stop (red outline).
+ * - Top tabs per the Android app: ALL / SHARED PROFILES / folder names,
+ *   uppercase with a green underline on the selected tab; the "+" FAB is
+ *   a dark circle (Play screenshot). Search placeholder is "Search...".
  * - "Settings ›" opens the quick-settings sheet (Profile essentials, §5).
  * - Row ⋮ menu in the exact capture §6 order.
  */
@@ -98,12 +108,19 @@ fun ProfileListScreen(
     onNewProfile: () -> Unit
 ) {
     var query by remember { mutableStateOf("") }
-    var folderFilter by remember { mutableStateOf<String?>(null) }
+    // Android-app tabs: "all" | "shared" | a folder id
+    var tab by remember { mutableStateOf("all") }
     var pinnedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     val visible = profiles.filter { p ->
         p.deletedAt == null &&
-            (folderFilter == null || folderFilter in p.folderIds) &&
+            when (tab) {
+                // Profiles shared WITH you live on the account, not on this
+                // device — the local store has none, so the tab is empty.
+                "shared" -> false
+                "all" -> true
+                else -> tab in p.folderIds
+            } &&
             (query.isBlank() || p.name.contains(query, ignoreCase = true) || p.id.contains(query, ignoreCase = true))
     }.sortedByDescending { it.id in pinnedIds }
 
@@ -111,7 +128,7 @@ fun ProfileListScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onNewProfile,
-                containerColor = BrandTeal,
+                containerColor = DarkSidebar,
                 contentColor = Color.White
             ) {
                 Icon(Icons.Filled.Add, contentDescription = "Add profile")
@@ -128,25 +145,20 @@ fun ProfileListScreen(
                 value = query,
                 onValueChange = { query = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Search") },
+                placeholder = { Text("Search...") },
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                 singleLine = true
             )
-            Spacer(Modifier.height(8.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Spacer(Modifier.height(4.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 item {
-                    FilterChip(
-                        selected = folderFilter == null,
-                        onClick = { folderFilter = null },
-                        label = { Text("All profiles") }
-                    )
+                    ListTab("ALL", tab == "all") { tab = "all" }
+                }
+                item {
+                    ListTab("SHARED PROFILES", tab == "shared") { tab = "shared" }
                 }
                 items(folders) { folder ->
-                    FilterChip(
-                        selected = folderFilter == folder.id,
-                        onClick = { folderFilter = if (folderFilter == folder.id) null else folder.id },
-                        label = { Text(folder.name) }
-                    )
+                    ListTab(folder.name.uppercase(), tab == folder.id) { tab = folder.id }
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -157,13 +169,27 @@ fun ProfileListScreen(
                         .padding(top = 48.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        "No profiles yet",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedButton(onClick = onNewProfile) { Text("+ Add profile") }
+                    if (tab == "shared") {
+                        Text(
+                            "No shared profiles",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Profiles other people share with you will appear here.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Text(
+                            "No profiles yet",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        OutlinedButton(onClick = onNewProfile) { Text("+ Add profile") }
+                    }
                 }
             }
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -198,6 +224,44 @@ fun StateDot(state: String) {
             "launching", "syncing" -> drawCircle(color = StatusBlue)
             else -> drawCircle(color = Color(0xFF9CA3AF), style = Stroke(width = 2f))
         }
+    }
+}
+
+/** Android-app tab (Play screenshot): uppercase label, green underline when selected. */
+@Composable
+private fun ListTab(label: String, selected: Boolean, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .clickable { onClick() }
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            color = if (selected) BrandTeal else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .height(2.dp)
+                .width(30.dp)
+                .background(if (selected) BrandTeal else Color.Transparent)
+        )
+    }
+}
+
+/**
+ * Profile-row proxy line, Android-app style (Play screenshot): flag +
+ * lowercase descriptor, e.g. "🇫🇷 residential • host:port", "http • h:p".
+ */
+private fun ProxyConfig.rowLabel(): String {
+    val where = if (host.isNotBlank() && port > 0) " • $host:$port" else ""
+    return when (mode) {
+        "devxyz" -> "${Countries.flag(buyCountry)} ${buyType.lowercase()}$where".trim()
+        "custom" -> if (isSet) "${type.lowercase()}$where" else "No proxy"
+        else -> "No proxy"
     }
 }
 
@@ -283,7 +347,7 @@ private fun ProfileRow(
                         )
                     }
                     Text(
-                        "Proxy: ${profile.proxy.listLabel}",
+                        profile.proxy.rowLabel(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -400,14 +464,15 @@ private fun ProfileRow(
                         Text("Stop")
                     }
                 } else {
-                    OutlinedButton(
+                    // GoLogin Android: Run is a SOLID green filled button.
+                    Button(
                         onClick = { showRunChoice = true },
                         enabled = !launching,
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = BrandTeal),
-                        border = BorderStroke(1.dp, BrandTeal)
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = BrandTeal,
+                            contentColor = Color.White
+                        )
                     ) {
-                        Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
                         Text(if (launching) "Starting…" else "Run")
                     }
                 }
@@ -555,6 +620,9 @@ fun QuickSettingsSheet(
     var browser by remember { mutableStateOf(profile.browser) }
     var cookies by remember { mutableStateOf(profile.cookies) }
     var showCookiesEdit by remember { mutableStateOf(false) }
+    var overviewOpen by remember { mutableStateOf(false) }
+    var proxyLocOpen by remember { mutableStateOf(false) }
+    var browserOpen by remember { mutableStateOf(false) }
     var storageOpen by remember { mutableStateOf(false) }
     var hardwareOpen by remember { mutableStateOf(false) }
 
@@ -620,7 +688,11 @@ fun QuickSettingsSheet(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         StateDot(if (profile.proxy.isSet) "running" else "ready")
                         Spacer(Modifier.width(6.dp))
-                        Text(profile.proxy.listLabel)
+                        Text(
+                            (if (profile.proxy.mode == "devxyz")
+                                Countries.flag(profile.proxy.buyCountry) + " " else "") +
+                                profile.proxy.listLabel
+                        )
                     }
                     TextButton(onClick = onOpenEditor) { Text("Choose location or proxy") }
                 }
@@ -629,7 +701,7 @@ fun QuickSettingsSheet(
                 val fp = profile.fingerprint
                 Text(
                     fp.navigator.languages.joinToString(" ") +
-                        if (fp.timezone.auto) " | Based on IP" else ""
+                        if (fp.navigator.languagesAuto) " | Based on IP" else ""
                 )
             }
             EssentialRow("Timezone") {
@@ -638,7 +710,10 @@ fun QuickSettingsSheet(
             }
             EssentialRow("Geolocation") {
                 val geo = profile.fingerprint.geolocation
-                Text(geo.mode.replaceFirstChar { it.uppercase() } + if (geo.auto) " | Based on IP" else "")
+                Text(
+                    if (geo.auto) "Based on IP"
+                    else geo.mode.replaceFirstChar { it.uppercase() } + " • ${geo.lat}, ${geo.lon}"
+                )
             }
             EssentialRow("Resolution") {
                 Text(profile.fingerprint.navigator.screenResolution)
@@ -661,16 +736,72 @@ fun QuickSettingsSheet(
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            // Capture §5 collapsed sections, in order: Profile Overview /
+            // Proxy & Location / Browser / Storage / Hardware.
+            SectionHeader("Profile Overview", overviewOpen) { overviewOpen = !overviewOpen }
+            if (overviewOpen) {
+                val fp = profile.fingerprint
+                EssentialRow("OS") { Text(OsOptions.label(profile.os)) }
+                EssentialRow("Browser") {
+                    Text("Chrome ${fp.navigator.browserVersion.substringBefore(".")}")
+                }
+                EssentialRow("Platform") { Text(fp.navigator.platform) }
+                EssentialRow("Status") { Text(profile.status) }
+                EssentialRow("Created") { Text(profile.createdAt.take(10)) }
+            }
+            SectionHeader("Proxy & Location", proxyLocOpen) { proxyLocOpen = !proxyLocOpen }
+            if (proxyLocOpen) {
+                val fp = profile.fingerprint
+                EssentialRow("Proxy") { Text(profile.proxy.listLabel) }
+                EssentialRow("Timezone") {
+                    Text(if (fp.timezone.auto) "Based on IP" else fp.timezone.zone)
+                }
+                EssentialRow("Geolocation") {
+                    Text(if (fp.geolocation.auto) "Based on IP" else "${fp.geolocation.lat}, ${fp.geolocation.lon}")
+                }
+                EssentialRow("WebRTC") {
+                    Text(if (fp.webrtcMode == "basedOnIp") "Based on IP" else "Off")
+                }
+                EssentialRow("Custom DNS") {
+                    Text(browser.customDns.ifBlank { "+ Add custom DNS" })
+                }
+            }
+            SectionHeader("Browser", browserOpen) { browserOpen = !browserOpen }
+            if (browserOpen) {
+                val fp = profile.fingerprint
+                EssentialRow("User Agent") {
+                    Text(fp.navigator.userAgent, maxLines = 2)
+                }
+                EssentialRow("Start URL") {
+                    Text(
+                        CaptureData.startUrlOptions.firstOrNull { it.first == browser.startUrl }?.second
+                            ?: browser.startUrl
+                    )
+                }
+                EssentialRow("Bookmarks") {
+                    Text("${DefaultBookmarks.links(profile.bookmarks).size} bookmarks")
+                }
+                EssentialRow("Extensions") { Text("${profile.extensions.size} extensions") }
+                EssentialRow("Fonts") { Text(if (fp.fontsMasking) "Masked" else "Real") }
+                EssentialRow("Launch arguments") {
+                    Text(browser.launchArguments.ifBlank { "—" })
+                }
+            }
             SectionHeader("Storage", storageOpen) { storageOpen = !storageOpen }
             if (storageOpen) {
+                // Capture §5 Storage toggle order
+                SwitchRow("Save tabs", browser.saveTabs) { browser = browser.copy(saveTabs = it) }
                 SwitchRow("Save history", browser.saveHistory) { browser = browser.copy(saveHistory = it) }
                 SwitchRow("Save bookmarks", browser.saveBookmarks) { browser = browser.copy(saveBookmarks = it) }
-                SwitchRow("Save passwords", browser.savePasswords) { browser = browser.copy(savePasswords = it) }
-                SwitchRow("Enable Local Storage", browser.localStorage) { browser = browser.copy(localStorage = it) }
-                SwitchRow("Enable IndexedDB", browser.indexedDb) { browser = browser.copy(indexedDb = it) }
-                SwitchRow("Enable Google services", browser.googleServices) { browser = browser.copy(googleServices = it) }
+                SwitchRow("Google services", browser.googleServices) { browser = browser.copy(googleServices = it) }
                 SwitchRow("Disable image loading", browser.disableImageLoading) { browser = browser.copy(disableImageLoading = it) }
                 SwitchRow("Disable video autoplay", browser.disableVideoAutoplay) { browser = browser.copy(disableVideoAutoplay = it) }
+                SwitchRow("Save passwords", browser.savePasswords) { browser = browser.copy(savePasswords = it) }
+                SwitchRow("Local storage", browser.localStorage) { browser = browser.copy(localStorage = it) }
+                SwitchRow("IndexedDB", browser.indexedDb) { browser = browser.copy(indexedDb = it) }
+                SwitchRow("Browser plugins", browser.vulnerablePlugins) { browser = browser.copy(vulnerablePlugins = it) }
+                SwitchRow("Allow install extensions", browser.allowInstallExtensions) { browser = browser.copy(allowInstallExtensions = it) }
+                SwitchRow("System Extensions", browser.systemExtensions) { browser = browser.copy(systemExtensions = it) }
             }
             SectionHeader("Hardware", hardwareOpen) { hardwareOpen = !hardwareOpen }
             if (hardwareOpen) {
@@ -679,9 +810,15 @@ fun QuickSettingsSheet(
                 EssentialRow("Device memory") { Text("${fp.navigator.ram} GB") }
                 EssentialRow("Threads") { Text("${fp.navigator.cpuCores} threads") }
                 EssentialRow("Media Devices") {
-                    Text("Cam. ${fp.mediaDevices.videoInputs} / Mic. ${fp.mediaDevices.audioInputs} / Sp. ${fp.mediaDevices.audioOutputs}")
+                    Text(
+                        (if (fp.mediaMasking) "Masked " else "") +
+                            "Cam. ${fp.mediaDevices.videoInputs} / Mic. ${fp.mediaDevices.audioInputs} / Sp. ${fp.mediaDevices.audioOutputs}"
+                    )
                 }
                 EssentialRow("Canvas") { Text(fp.hardware.canvasMode.replaceFirstChar { it.uppercase() }) }
+                EssentialRow("WebGL Image") {
+                    Text(if (fp.hardware.webglNoise) "Masked with noise" else "Off")
+                }
                 EssentialRow("WebGL info") { Text(fp.hardware.webglVendor) }
                 EssentialRow("Audio Context") {
                     Text(if (fp.hardware.audioNoise) "Masked with noise" else "Real")

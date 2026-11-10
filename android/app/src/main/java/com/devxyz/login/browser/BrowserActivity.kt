@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -1189,6 +1190,10 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
                         modifier = Modifier.padding(vertical = 2.dp)
                     )
                 }
+                // Capture §0: the console carries a "Cloud Browser docs" link.
+                TextButton(onClick = {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://gologin.com/docs")))
+                }) { Text("Cloud Browser docs") }
                 Spacer(Modifier.height(20.dp))
             }
         }

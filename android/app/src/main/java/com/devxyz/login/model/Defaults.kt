@@ -12,6 +12,9 @@ import kotlinx.serialization.Serializable
 data class DefaultProfileSettings(
     /** Language "Auto" + Based on IP toggle */
     val languageAuto: Boolean = true,
+    /** v3 (additive): selected languages from the Languages modal
+     *  (capture §12.2 defaults: en-PH, en, en-US). */
+    val languages: List<String> = listOf("en-PH", "en", "en-US"),
     val minResolution: String = "1920x1080",
     val maxResolution: String = "1920x1080",
     /** "device" (Device OS pill, selected in GoLogin) or an OsOptions value */

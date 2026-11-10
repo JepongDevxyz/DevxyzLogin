@@ -85,7 +85,8 @@ object FingerprintGenerator {
                 )
                 hw = HardwareInfo(
                     webglVendor = "Google Inc. (Qualcomm)",
-                    webglRenderer = "ANGLE (Qualcomm, Adreno (TM) 740, OpenGL ES 3.2)"
+                    // From the capture-verbatim Adreno set (610/618/619/650/710/730/735/750/810/829/830)
+                    webglRenderer = "ANGLE (Qualcomm, Adreno (TM) 730, OpenGL ES 3.2)"
                 )
             }
         }

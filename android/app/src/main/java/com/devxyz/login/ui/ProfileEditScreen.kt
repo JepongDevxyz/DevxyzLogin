@@ -1,5 +1,6 @@
 package com.devxyz.login.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,7 +17,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
@@ -45,24 +49,32 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.devxyz.login.data.ProfileStore
 import com.devxyz.login.model.CaptureData
+import com.devxyz.login.model.Countries
 import com.devxyz.login.model.DefaultBookmarks
 import com.devxyz.login.model.FingerprintGenerator
 import com.devxyz.login.model.Folder
 import com.devxyz.login.model.OsOptions
 import com.devxyz.login.model.Profile
+import com.devxyz.login.model.SharedProxy
 
 /**
- * Create/Edit profile — section order follows the GoLogin editor with the
- * Proxy tab prominent (it is the DEFAULT tab in GoLogin, capture §4):
- * Name/Folder → Proxy → Overview (OS + New Fingerprint) → Profile Summary →
- * Timezone → Geolocation → Extensions → Bookmarks → Advanced (Navigator /
- * Fonts / Media devices / Hardware / Storage / Other / WebRTC) → Cookies.
- * All option lists come from [CaptureData] (capture-exact). OS locked after
- * creation.
+ * Create/Edit profile — v3 layout follows the GoLogin ANDROID app
+ * (Play screenshots): a "Create profile" screen of collapsible accordion
+ * sections in the order Operating system → Proxy → Timezone → WebRTC →
+ * Geolocation → Extensions → Bookmarks → Advanced → Cookies, with the
+ * Profile Summary card under the name field and a full-width solid
+ * "CREATE PROFILE" button. Section contents transcribe the web capture
+ * (GOLOGIN_CAPTURE.md §4): Proxy is the default-expanded section (it is
+ * the DEFAULT tab in the web editor), OS defaults to Linux and locks
+ * after creation, and every option list comes from [CaptureData] /
+ * [Countries] (capture-exact).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,9 +82,12 @@ fun ProfileEditScreen(
     initial: Profile,
     isNew: Boolean,
     folders: List<Folder>,
+    savedProxies: List<SharedProxy>,
     onSave: (Profile) -> Unit,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
     var profile by remember { mutableStateOf(initial) }
     val fp = profile.fingerprint
     val nav = fp.navigator
@@ -87,7 +102,7 @@ fun ProfileEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isNew) "New Browser Profile" else "Profile settings") },
+                title = { Text(if (isNew) "Create profile" else "Edit profile") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
@@ -115,196 +130,301 @@ fun ProfileEditScreen(
                 .joinToString { it.name }.ifBlank { "No folder" }
             Text("Folder: $folderLabel", style = MaterialTheme.typography.bodySmall)
 
-            // ---------- Proxy (GoLogin's default editor tab) ----------
-            SectionTitle("Proxy")
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                FilterChip(
-                    selected = profile.proxy.mode == "devxyz",
-                    onClick = { profile = profile.copy(proxy = profile.proxy.copy(mode = "devxyz")) },
-                    label = { Text("DevxyzLogin proxy") }
+            // ---------- Profile Summary (capture §4.9) ----------
+            ProfileSummaryCard(profile, folders)
+
+            // ---------- Operating system (web editor "Overview") ----------
+            AccordionSection("Operating system", initiallyExpanded = true) {
+                Text(
+                    "Operating System${if (!isNew) " (locked after creation)" else ""}",
+                    style = MaterialTheme.typography.bodySmall
                 )
-                FilterChip(
-                    selected = profile.proxy.mode == "custom",
-                    onClick = { profile = profile.copy(proxy = profile.proxy.copy(mode = "custom")) },
-                    label = { Text("Your proxy") }
-                )
-                FilterChip(
-                    selected = profile.proxy.mode == "none",
-                    onClick = { profile = profile.copy(proxy = profile.proxy.copy(mode = "none")) },
-                    label = { Text("Without proxy") }
-                )
-            }
-            when (profile.proxy.mode) {
-                "devxyz" -> {
-                    Text("Proxy per GB", style = MaterialTheme.typography.bodySmall)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        CaptureData.proxyCountries.forEach { (code, country) ->
-                            FilterChip(
-                                selected = profile.proxy.host.contains(code, ignoreCase = true),
-                                onClick = {
-                                    profile = profile.copy(
-                                        proxy = profile.proxy.copy(
-                                            type = "http",
-                                            host = "geo.devxyzlogin.local",
-                                            port = 10080
-                                        )
-                                    )
-                                },
-                                label = { Text(country) }
-                            )
-                        }
-                    }
-                    Text("Type", style = MaterialTheme.typography.bodySmall)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf("Residential", "Mobile", "Data Center").forEach { kind ->
-                            FilterChip(
-                                selected = kind == "Residential",
-                                onClick = { },
-                                label = { Text(kind) }
-                            )
-                        }
-                    }
-                    Text(
-                        "Built-in proxies are assigned by the DevxyzLogin server; country defaults to France (GoLogin parity). Use \"Your proxy\" for a proxy you already own.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-                "custom" -> {
-                    DropdownField(
-                        label = "Proxy Type, Host and Port",
-                        value = profile.proxy.type,
-                        options = CaptureData.proxyTypeOptions + ("https" to "HTTPS Proxy"),
-                        onSelect = { profile = profile.copy(proxy = profile.proxy.copy(type = it)) }
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = profile.proxy.host,
-                            onValueChange = { profile = profile.copy(proxy = profile.proxy.copy(host = it)) },
-                            label = { Text("IP Address") },
-                            modifier = Modifier.weight(1f), singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = if (profile.proxy.port == 0) "" else profile.proxy.port.toString(),
-                            onValueChange = { profile = profile.copy(proxy = profile.proxy.copy(port = it.toIntOrNull() ?: 0)) },
-                            label = { Text("Port") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.width(110.dp), singleLine = true
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.horizontalScroll(rememberScrollState())
+                ) {
+                    OsOptions.all.forEach { (value, label) ->
+                        FilterChip(
+                            selected = profile.os == value,
+                            enabled = isNew,
+                            onClick = {
+                                profile = profile.copy(
+                                    os = value,
+                                    fingerprint = FingerprintGenerator.generate(value)
+                                )
+                            },
+                            label = { Text(label) }
                         )
                     }
-                    OutlinedTextField(
-                        value = profile.proxy.username,
-                        onValueChange = { profile = profile.copy(proxy = profile.proxy.copy(username = it)) },
-                        label = { Text("Proxy Username") },
-                        modifier = Modifier.fillMaxWidth(), singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = profile.proxy.password,
-                        onValueChange = { profile = profile.copy(proxy = profile.proxy.copy(password = it)) },
-                        label = { Text("Proxy Password") },
-                        modifier = Modifier.fillMaxWidth(), singleLine = true
-                    )
-                    Text(
-                        "Note: Android WebView applies HTTP/HTTPS proxies only; SOCKS and proxy authentication cannot be applied (you'll be told at launch).",
-                        style = MaterialTheme.typography.bodySmall
-                    )
                 }
-                else -> {
-                    Text(
-                        "This profile connects directly, without a proxy.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                OutlinedButton(onClick = {
+                    profile = profile.copy(fingerprint = FingerprintGenerator.generate(profile.os))
+                }) {
+                    Icon(Icons.Filled.Refresh, contentDescription = null)
+                    Spacer(Modifier.padding(4.dp))
+                    Text("New Fingerprint")
                 }
-            }
-            OutlinedButton(onClick = { /* format check only in-app */ }) {
-                Text("Check Proxy")
+                // Folders membership
+                Text("Folders", style = MaterialTheme.typography.bodySmall)
+                if (folders.isEmpty()) {
+                    Text("No folders yet — create one in Folders manager.", style = MaterialTheme.typography.bodySmall)
+                }
+                folders.forEach { folder ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Switch(
+                            checked = folder.id in profile.folderIds,
+                            onCheckedChange = { on ->
+                                profile = profile.copy(
+                                    folderIds = if (on) profile.folderIds + folder.id
+                                    else profile.folderIds - folder.id
+                                )
+                            }
+                        )
+                        Text(folder.name)
+                    }
+                }
+                OutlinedTextField(
+                    value = profile.tags.joinToString(", "),
+                    onValueChange = { text ->
+                        profile = profile.copy(
+                            tags = text.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                        )
+                    },
+                    label = { Text("Tags (comma separated)") },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true
+                )
+                OutlinedTextField(
+                    value = profile.notes,
+                    onValueChange = { profile = profile.copy(notes = it) },
+                    label = { Text("Notes") },
+                    modifier = Modifier.fillMaxWidth(), minLines = 2
+                )
             }
 
-            // ---------- Overview ----------
-            SectionTitle("Overview")
-            Text(
-                "Operating System${if (!isNew) " (locked after creation)" else ""}",
-                style = MaterialTheme.typography.bodySmall
-            )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.horizontalScroll(rememberScrollState())
-            ) {
-                OsOptions.all.forEach { (value, label) ->
+            // ---------- Proxy (GoLogin's default editor tab) ----------
+            AccordionSection("Proxy", initiallyExpanded = true) {
+                Text("Connection type", style = MaterialTheme.typography.bodySmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     FilterChip(
-                        selected = profile.os == value,
-                        enabled = isNew,
+                        selected = profile.proxy.mode == "devxyz",
+                        onClick = { profile = profile.copy(proxy = profile.proxy.copy(mode = "devxyz")) },
+                        label = { Text("DevxyzLogin proxy") }
+                    )
+                    FilterChip(
+                        selected = profile.proxy.mode == "custom",
                         onClick = {
+                            val p = profile.proxy
                             profile = profile.copy(
-                                os = value,
-                                fingerprint = FingerprintGenerator.generate(value)
+                                proxy = p.copy(
+                                    mode = "custom",
+                                    type = if (p.type in listOf("http", "https", "socks4", "socks5")) p.type else "http"
+                                )
                             )
                         },
-                        label = { Text(label) }
+                        label = { Text("Your proxy") }
+                    )
+                    FilterChip(
+                        selected = profile.proxy.mode == "none",
+                        onClick = { profile = profile.copy(proxy = profile.proxy.copy(mode = "none")) },
+                        label = { Text("Without proxy") }
                     )
                 }
-            }
-            OutlinedButton(onClick = {
-                profile = profile.copy(fingerprint = FingerprintGenerator.generate(profile.os))
-            }) {
-                Icon(Icons.Filled.Refresh, contentDescription = null)
-                Spacer(Modifier.padding(4.dp))
-                Text("New Fingerprint")
-            }
-            // Folders membership
-            Text("Folders", style = MaterialTheme.typography.bodySmall)
-            if (folders.isEmpty()) {
-                Text("No folders yet — create one in Folders manager.", style = MaterialTheme.typography.bodySmall)
-            }
-            folders.forEach { folder ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Switch(
-                        checked = folder.id in profile.folderIds,
-                        onCheckedChange = { on ->
-                            profile = profile.copy(
-                                folderIds = if (on) profile.folderIds + folder.id
-                                else profile.folderIds - folder.id
+                when (profile.proxy.mode) {
+                    "devxyz" -> {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            FilterChip(
+                                selected = !profile.proxy.dedicated,
+                                onClick = { profile = profile.copy(proxy = profile.proxy.copy(dedicated = false)) },
+                                label = { Text("Proxy per GB") }
+                            )
+                            FilterChip(
+                                selected = profile.proxy.dedicated,
+                                onClick = { profile = profile.copy(proxy = profile.proxy.copy(dedicated = true)) },
+                                label = { Text("Buy dedicated IP") }
                             )
                         }
-                    )
-                    Text(folder.name)
+                        DropdownField(
+                            label = "Country",
+                            value = profile.proxy.buyCountry,
+                            options = Countries.all.map {
+                                it.code to "${Countries.flag(it.code)} ${it.name}"
+                            },
+                            onSelect = { code ->
+                                profile = profile.copy(
+                                    proxy = profile.proxy.copy(
+                                        buyCountry = code,
+                                        type = "http",
+                                        host = "geo.devxyzlogin.local",
+                                        port = 10080
+                                    )
+                                )
+                            }
+                        )
+                        if (profile.proxy.dedicated) {
+                            Card(modifier = Modifier.fillMaxWidth()) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    listOf(
+                                        "Same IP every time",
+                                        "Looks like a home connection",
+                                        "Just for you — no sharing",
+                                        "Unlimited traffic"
+                                    ).forEach { benefit ->
+                                        Text("✓ $benefit", color = BrandTeal)
+                                    }
+                                    Spacer(Modifier.height(8.dp))
+                                    Button(onClick = {
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            "Dedicated IP checkout runs through the DevxyzLogin server",
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                    }, modifier = Modifier.fillMaxWidth()) {
+                                        Text("Buy for $5/month")
+                                    }
+                                    Text(
+                                        "Requires paid subscription",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    Text(
+                                        "Create Profile is disabled in Buy dedicated IP mode (GoLogin parity).",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
+                        } else {
+                            Text("Type", style = MaterialTheme.typography.bodySmall)
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                listOf("Residential", "Mobile", "Data Center").forEach { kind ->
+                                    FilterChip(
+                                        selected = profile.proxy.buyType == kind,
+                                        onClick = {
+                                            profile = profile.copy(proxy = profile.proxy.copy(buyType = kind))
+                                        },
+                                        label = { Text(kind) }
+                                    )
+                                }
+                            }
+                            OutlinedButton(onClick = {
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "Built-in ${profile.proxy.buyType} proxy for ${Countries.nameOf(profile.proxy.buyCountry)} — the live check runs through the DevxyzLogin server",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            }) { Text("Check Proxy") }
+                            Text(
+                                "Built-in proxies are assigned by the DevxyzLogin server; country defaults to France (GoLogin parity). Use \"Your proxy\" for a proxy you already own.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                    "custom" -> {
+                        if (savedProxies.isNotEmpty()) {
+                            DropdownField(
+                                label = "Choose saved proxy",
+                                value = "",
+                                options = listOf("" to "Select saved proxy") + savedProxies.map {
+                                    it.id to "${it.name} — ${it.proxy.host}:${it.proxy.port}"
+                                },
+                                onSelect = { id ->
+                                    savedProxies.firstOrNull { it.id == id }?.let { sp ->
+                                        profile = profile.copy(proxy = sp.proxy.copy(mode = "custom"))
+                                    }
+                                }
+                            )
+                            Text(
+                                "Add or edit proxy — manage the list on the Proxies page.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        DropdownField(
+                            label = "Proxy Type, Host and Port",
+                            value = profile.proxy.type,
+                            options = CaptureData.proxyTypeOptions,
+                            onSelect = { profile = profile.copy(proxy = profile.proxy.copy(type = it)) }
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = profile.proxy.host,
+                                onValueChange = { profile = profile.copy(proxy = profile.proxy.copy(host = it)) },
+                                label = { Text("IP Address") },
+                                modifier = Modifier.weight(1f), singleLine = true
+                            )
+                            OutlinedTextField(
+                                value = if (profile.proxy.port == 0) "" else profile.proxy.port.toString(),
+                                onValueChange = { profile = profile.copy(proxy = profile.proxy.copy(port = it.toIntOrNull() ?: 0)) },
+                                label = { Text("Port") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.width(110.dp), singleLine = true
+                            )
+                        }
+                        OutlinedTextField(
+                            value = profile.proxy.username,
+                            onValueChange = { profile = profile.copy(proxy = profile.proxy.copy(username = it)) },
+                            label = { Text("Proxy Username") },
+                            modifier = Modifier.fillMaxWidth(), singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = profile.proxy.password,
+                            onValueChange = { profile = profile.copy(proxy = profile.proxy.copy(password = it)) },
+                            label = { Text("Proxy Password") },
+                            modifier = Modifier.fillMaxWidth(), singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = profile.proxy.changeIpUrl,
+                            onValueChange = { profile = profile.copy(proxy = profile.proxy.copy(changeIpUrl = it)) },
+                            label = { Text("Change IP URL for mobile proxy") },
+                            modifier = Modifier.fillMaxWidth(), singleLine = true
+                        )
+                        Text(
+                            "Note: Android WebView applies HTTP/HTTPS proxies only; SOCKS and proxy authentication cannot be applied (you'll be told at launch).",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        OutlinedButton(onClick = {
+                            val p = profile.proxy
+                            android.widget.Toast.makeText(
+                                context,
+                                if (p.host.isNotBlank() && p.port > 0)
+                                    "Proxy fields look valid — the live check runs through the DevxyzLogin server"
+                                else "Enter the proxy IP and port first",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        }) { Text("Check Proxy") }
+                    }
+                    else -> {
+                        Text(
+                            "This profile connects directly, without a proxy.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
             }
-            OutlinedTextField(
-                value = profile.tags.joinToString(", "),
-                onValueChange = { text ->
-                    profile = profile.copy(
-                        tags = text.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                    )
-                },
-                label = { Text("Tags (comma separated)") },
-                modifier = Modifier.fillMaxWidth(), singleLine = true
-            )
-            OutlinedTextField(
-                value = profile.notes,
-                onValueChange = { profile = profile.copy(notes = it) },
-                label = { Text("Notes") },
-                modifier = Modifier.fillMaxWidth(), minLines = 2
-            )
-
-            // ---------- Profile Summary (capture §4.9) ----------
-            ProfileSummaryCard(profile)
 
             // ---------- Timezone ----------
-            SectionTitle("Timezone")
-            SwitchRow("Fill timezone based on the external IP", fp.timezone.auto) { on ->
-                profile = profile.copy(fingerprint = fp.copy(timezone = fp.timezone.copy(auto = on)))
+            AccordionSection("Timezone") {
+                SwitchRow("Fill timezone based on the external IP", fp.timezone.auto) { on ->
+                    profile = profile.copy(fingerprint = fp.copy(timezone = fp.timezone.copy(auto = on)))
+                }
+                if (!fp.timezone.auto) {
+                    OutlinedTextField(
+                        value = fp.timezone.zone,
+                        onValueChange = { profile = profile.copy(fingerprint = fp.copy(timezone = fp.timezone.copy(zone = it))) },
+                        label = { Text("Timezone (IANA, e.g. Asia/Manila)") },
+                        modifier = Modifier.fillMaxWidth(), singleLine = true
+                    )
+                }
             }
-            if (!fp.timezone.auto) {
-                OutlinedTextField(
-                    value = fp.timezone.zone,
-                    onValueChange = { profile = profile.copy(fingerprint = fp.copy(timezone = fp.timezone.copy(zone = it))) },
-                    label = { Text("Timezone (IANA, e.g. Asia/Manila)") },
-                    modifier = Modifier.fillMaxWidth(), singleLine = true
+
+            // ---------- WebRTC (own accordion in the Android app) ----------
+            AccordionSection("WebRTC") {
+                RadioChips(
+                    options = listOf("basedOnIp" to "Based on IP", "off" to "Off"),
+                    value = if (fp.webrtcMode == "basedOnIp") "basedOnIp" else "off",
+                    onSelect = { profile = profile.copy(fingerprint = fp.copy(webrtcMode = it)) }
                 )
             }
 
             // ---------- Geolocation ----------
-            SectionTitle("Geolocation")
+            AccordionSection("Geolocation") {
             RadioChips(
                 options = listOf("prompt" to "Prompt", "allow" to "Allow", "block" to "Block"),
                 value = fp.geolocation.mode,
@@ -331,9 +451,10 @@ fun ProfileEditScreen(
                     )
                 }
             }
+            }
 
             // ---------- Extensions ----------
-            SectionTitle("Extensions")
+            AccordionSection("Extensions") {
             profile.extensions.forEachIndexed { index, ext ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(ext, modifier = Modifier.weight(1f))
@@ -367,12 +488,13 @@ fun ProfileEditScreen(
                 "Note: WebView cannot install Chromium extensions; this list is stored with the profile (GoLogin parity) for the future engine.",
                 style = MaterialTheme.typography.bodySmall
             )
+            }
 
             // ---------- Bookmarks ----------
-            SectionTitle("Bookmarks")
+            AccordionSection("Bookmarks") {
             var bookmarksText by remember {
                 mutableStateOf(
-                    initial.bookmarks.joinToString("\n").ifBlank {
+                    profile.bookmarks.joinToString("\n").ifBlank {
                         if (isNew) DefaultBookmarks.editorText else ""
                     }
                 )
@@ -389,15 +511,24 @@ fun ProfileEditScreen(
                 label = { Text("Edit Bookmarks — one per line: folder::name::url") },
                 modifier = Modifier.fillMaxWidth(), minLines = 6
             )
+            }
 
             // ---------- Advanced: Navigator ----------
-            SectionTitle("Advanced — Navigator")
-            OutlinedTextField(
-                value = nav.userAgent,
-                onValueChange = { profile = profile.copy(fingerprint = fp.copy(navigator = nav.copy(userAgent = it))) },
-                label = { Text("User-Agent") },
-                modifier = Modifier.fillMaxWidth(), minLines = 2
-            )
+            AccordionSection("Advanced") {
+            SectionTitle("Navigator")
+            // Play screenshot: the UA field carries a copy icon at its right.
+            Row(verticalAlignment = Alignment.Top) {
+                OutlinedTextField(
+                    value = nav.userAgent,
+                    onValueChange = { profile = profile.copy(fingerprint = fp.copy(navigator = nav.copy(userAgent = it))) },
+                    label = { Text("User-Agent") },
+                    modifier = Modifier.weight(1f), minLines = 2
+                )
+                IconButton(onClick = {
+                    clipboard.setText(AnnotatedString(nav.userAgent))
+                    android.widget.Toast.makeText(context, "User-Agent copied", android.widget.Toast.LENGTH_SHORT).show()
+                }) { Icon(Icons.Filled.ContentCopy, contentDescription = "Copy User-Agent") }
+            }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -433,22 +564,35 @@ fun ProfileEditScreen(
                     .distinct().map { it to it },
                 onSelect = { profile = profile.copy(fingerprint = fp.copy(navigator = nav.copy(screenResolution = it))) }
             )
-            OutlinedTextField(
-                value = nav.languages.joinToString(", "),
-                onValueChange = { text ->
-                    profile = profile.copy(
-                        fingerprint = fp.copy(
-                            navigator = nav.copy(
-                                languages = text.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            if (nav.languagesAuto) {
+                // Capture §4.7: with "Based on IP" ON the Languages box reads
+                // "Automatic" and is disabled.
+                OutlinedTextField(
+                    value = "Automatic",
+                    onValueChange = {},
+                    readOnly = true,
+                    enabled = false,
+                    label = { Text("Languages") },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true
+                )
+            } else {
+                OutlinedTextField(
+                    value = nav.languages.joinToString(", "),
+                    onValueChange = { text ->
+                        profile = profile.copy(
+                            fingerprint = fp.copy(
+                                navigator = nav.copy(
+                                    languages = text.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                                )
                             )
                         )
-                    )
-                },
-                label = { Text("Languages (comma separated)") },
-                modifier = Modifier.fillMaxWidth(), singleLine = true
-            )
-            SwitchRow("Languages based on IP", fp.timezone.auto) { on ->
-                profile = profile.copy(fingerprint = fp.copy(timezone = fp.timezone.copy(auto = on)))
+                    },
+                    label = { Text("Languages (comma separated)") },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true
+                )
+            }
+            SwitchRow("Based on IP", nav.languagesAuto) { on ->
+                profile = profile.copy(fingerprint = fp.copy(navigator = nav.copy(languagesAuto = on)))
             }
             OutlinedTextField(
                 value = nav.platform,
@@ -478,6 +622,9 @@ fun ProfileEditScreen(
             }
 
             SectionTitle("Media devices")
+            SwitchRow("Mask Media Devices", fp.mediaMasking) { on ->
+                profile = profile.copy(fingerprint = fp.copy(mediaMasking = on))
+            }
             StepperField("Video Inputs", fp.mediaDevices.videoInputs) { v ->
                 profile = profile.copy(fingerprint = fp.copy(mediaDevices = fp.mediaDevices.copy(videoInputs = v)))
             }
@@ -489,7 +636,7 @@ fun ProfileEditScreen(
             }
 
             // ---------- Advanced: Hardware ----------
-            SectionTitle("Advanced — Hardware")
+            SectionTitle("Hardware")
             Text("Canvas", style = MaterialTheme.typography.bodySmall)
             RadioChips(
                 options = listOf("noise" to "Noise", "off" to "Off", "block" to "Block"),
@@ -547,7 +694,7 @@ fun ProfileEditScreen(
             )
 
             // ---------- Advanced: Storage / Other ----------
-            SectionTitle("Advanced — Storage Options")
+            SectionTitle("Storage")
             SwitchRow("Enable Local Storage", browser.localStorage) { on ->
                 profile = profile.copy(browser = browser.copy(localStorage = on))
             }
@@ -558,7 +705,7 @@ fun ProfileEditScreen(
                 profile = profile.copy(browser = browser.copy(vulnerablePlugins = on))
             }
 
-            SectionTitle("Advanced — Other")
+            SectionTitle("Other")
             SwitchRow("Enable Google services", browser.googleServices) { on ->
                 profile = profile.copy(browser = browser.copy(googleServices = on))
             }
@@ -588,7 +735,7 @@ fun ProfileEditScreen(
             )
             if (browser.startUrl == "specified") {
                 var pagesText by remember {
-                    mutableStateOf(initial.browser.startPages.joinToString("\n"))
+                    mutableStateOf(profile.browser.startPages.joinToString("\n"))
                 }
                 OutlinedTextField(
                     value = pagesText,
@@ -618,15 +765,11 @@ fun ProfileEditScreen(
                 modifier = Modifier.fillMaxWidth(), singleLine = true
             )
 
-            SectionTitle("WebRTC")
-            RadioChips(
-                options = listOf("basedOnIp" to "Based on IP", "off" to "Off"),
-                value = if (fp.webrtcMode == "basedOnIp") "basedOnIp" else "off",
-                onSelect = { profile = profile.copy(fingerprint = fp.copy(webrtcMode = it)) }
-            )
+            }
+            // ---------- end Advanced accordion ----------
 
             // ---------- Cookies ----------
-            SectionTitle("Cookies")
+            AccordionSection("Cookies") {
             OutlinedButton(onClick = { showCookiesImport = true }) {
                 Text("Import Cookies")
             }
@@ -636,10 +779,17 @@ fun ProfileEditScreen(
                     style = MaterialTheme.typography.bodySmall
                 )
             }
+            }
 
             Spacer(Modifier.height(8.dp))
-            Button(onClick = { save() }, modifier = Modifier.fillMaxWidth()) {
-                Text(if (isNew) "Create Profile" else "Save profile")
+            Button(
+                onClick = { save() },
+                // Capture §4.2: Create Profile is disabled in Buy dedicated IP mode.
+                enabled = !(profile.proxy.mode == "devxyz" && profile.proxy.dedicated),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // GoLogin Android button label (Play screenshot): CREATE PROFILE.
+                Text(if (isNew) "CREATE PROFILE" else "Save profile")
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -670,12 +820,14 @@ fun ProfileEditScreen(
 
 /** Profile Summary card (capture §4.9 rows). */
 @Composable
-private fun ProfileSummaryCard(profile: Profile) {
+private fun ProfileSummaryCard(profile: Profile, folders: List<Folder>) {
     val fp = profile.fingerprint
     val nav = fp.navigator
     val hw = fp.hardware
     val rows = listOf(
         "Profile name" to profile.name,
+        "Folder" to folders.filter { it.id in profile.folderIds }
+            .joinToString { it.name }.ifBlank { "No folder" },
         "Proxy" to when (profile.proxy.mode) {
             "devxyz" -> "DevxyzLogin"
             "custom" -> profile.proxy.type
@@ -704,7 +856,8 @@ private fun ProfileSummaryCard(profile: Profile) {
         "Media devices" to "(${fp.mediaDevices.videoInputs}|${fp.mediaDevices.audioInputs}|${fp.mediaDevices.audioOutputs})",
         "Local Storage" to profile.browser.localStorage.toString(),
         "Ext. Storage" to profile.browser.extensionStorage.toString(),
-        "Plugins" to profile.browser.vulnerablePlugins.toString()
+        "Plugins" to profile.browser.vulnerablePlugins.toString(),
+        "User-Agent" to nav.userAgent
     )
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -734,6 +887,45 @@ fun SectionTitle(text: String) {
         text, style = MaterialTheme.typography.titleMedium,
         modifier = Modifier.padding(top = 10.dp, bottom = 2.dp)
     )
+}
+
+/**
+ * Collapsible editor section — the GoLogin Android "Create profile"
+ * screen is a stack of these accordions (Play screenshots 1-2), each
+ * with a chevron header.
+ */
+@Composable
+fun AccordionSection(
+    title: String,
+    initiallyExpanded: Boolean = false,
+    content: @Composable () -> Unit
+) {
+    var expanded by remember { mutableStateOf(initiallyExpanded) }
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded }
+                    .padding(vertical = 10.dp)
+            ) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                    contentDescription = if (expanded) "Collapse section" else "Expand section"
+                )
+            }
+            if (expanded) {
+                content()
+                Spacer(Modifier.height(8.dp))
+            }
+        }
+    }
 }
 
 @Composable

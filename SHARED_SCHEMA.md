@@ -45,6 +45,12 @@ with **exactly** these field names. JSON is the interchange format
 | `port` | int | |
 | `username` | string | |
 | `password` | string | Stored locally only in v1 |
+| `buyCountry` | string | **v3 additive** (web v3 name): built-in proxy country, ISO alpha-2, default `"FR"`; only for `mode="devxyz"` |
+| `buyType` | string | **v3 additive**: `"Residential"` (default) \| `"Mobile"` \| `"Data Center"`; only for `mode="devxyz"` |
+| `dedicated` | bool | **v3 additive**: "Buy dedicated IP" segment selected, default `false` |
+| `changeIpUrl` | string | **v3 additive**: "Change IP URL for mobile proxy", default `""` |
+
+Other v3 additive fields (all defaulted, so v1/v2 stores load unchanged): `navigator.languagesAuto` (bool, `true`), `fingerprint.mediaMasking` (bool, `true`), `browser.saveTabs` (bool, `true`), `browser.allowInstallExtensions` (bool, `true`), `SharedProxy.country` / `SharedProxy.flag` (strings, `""`).
 
 ## Supporting objects (same store file on Android, `store.json`)
 

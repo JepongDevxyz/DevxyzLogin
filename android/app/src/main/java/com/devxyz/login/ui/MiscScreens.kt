@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +30,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,6 +60,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.devxyz.login.data.ProfileStore
 import com.devxyz.login.model.CaptureData
+import com.devxyz.login.model.Countries
 import com.devxyz.login.model.DefaultProfileSettings
 import com.devxyz.login.model.Folder
 import com.devxyz.login.model.OsOptions
@@ -195,6 +198,7 @@ fun ProxiesScreen(
     var host by remember { mutableStateOf("") }
     var port by remember { mutableStateOf("") }
     var type by remember { mutableStateOf("http") }
+    var countryCode by remember { mutableStateOf("FR") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
@@ -290,6 +294,12 @@ fun ProxiesScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(shared.name, style = MaterialTheme.typography.titleSmall)
                             Text(shared.proxy.listLabel, style = MaterialTheme.typography.bodySmall)
+                            if (shared.country.isNotBlank()) {
+                                Text(
+                                    "${shared.flag} ${shared.country}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                         }
                         Text(
                             "● Connected",
@@ -312,6 +322,11 @@ fun ProxiesScreen(
                 options = listOf("http" to "HTTP", "https" to "HTTPS", "socks4" to "SOCKS4", "socks5" to "SOCKS5"),
                 onSelect = { type = it }
             )
+            DropdownField(
+                label = "Country", value = countryCode,
+                options = Countries.all.map { it.code to "${Countries.flag(it.code)} ${it.name}" },
+                onSelect = { countryCode = it }
+            )
             OutlinedTextField(value = host, onValueChange = { host = it },
                 label = { Text("Host") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(value = port, onValueChange = { port = it },
@@ -327,7 +342,9 @@ fun ProxiesScreen(
                             id = ProfileStore.newId(),
                             name = name.ifBlank { host },
                             proxy = ProxyConfig(mode = "custom", type = type, host = host.trim(),
-                                port = port.toInt(), username = username, password = password)
+                                port = port.toInt(), username = username, password = password),
+                            country = Countries.nameOf(countryCode),
+                            flag = Countries.flag(countryCode)
                         )
                         onStoreChange(store.copy(proxies = store.proxies + entry))
                         name = ""; host = ""; port = ""; username = ""; password = ""
@@ -579,7 +596,7 @@ private fun OverviewSection(
         onSelect = onThemeChange
     )
     DropdownField(
-        label = "Default workspace when transferring profiles to you",
+        label = "Default workspace",
         value = store.workspaces.firstOrNull()?.name ?: "",
         options = store.workspaces.map { it.name to it.name },
         onSelect = { }
@@ -636,21 +653,40 @@ private fun DefaultsSection(
             Toast.makeText(context, "Templates are provided by the DevxyzLogin server", Toast.LENGTH_SHORT).show()
         }) { Text("From templates") }
     }
-    SwitchRow("Language — Auto (based on IP)", defaults.languageAuto) {
-        onDefaultsChange(defaults.copy(languageAuto = it))
+    var showLanguages by remember { mutableStateOf(false) }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text("Language", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                if (defaults.languageAuto) "Auto" else defaults.languages.joinToString(", "),
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+        TextButton(onClick = { showLanguages = true }) { Text("Edit") }
     }
     Text(
-        "Accept-Language header: en-PH,en;q=0.9,en-US;q=0.8",
+        "Accept-Language header: ${CaptureData.acceptLanguageHeader(defaults.languages)}",
         style = MaterialTheme.typography.bodySmall
     )
+    if (showLanguages) {
+        LanguagesDialog(
+            initialSelected = defaults.languages,
+            basedOnIp = defaults.languageAuto,
+            onDismiss = { showLanguages = false },
+            onSave = { langs, auto ->
+                onDefaultsChange(defaults.copy(languages = langs, languageAuto = auto))
+                showLanguages = false
+            }
+        )
+    }
     DropdownField(
-        label = "Minimal screen resolution",
+        label = "Min resolution",
         value = defaults.minResolution,
         options = CaptureData.screenResolutions.map { it to it },
         onSelect = { onDefaultsChange(defaults.copy(minResolution = it)) }
     )
     DropdownField(
-        label = "Maximum screen resolution",
+        label = "Max resolution",
         value = defaults.maxResolution,
         options = CaptureData.screenResolutions.map { it to it },
         onSelect = { onDefaultsChange(defaults.copy(maxResolution = it)) }
@@ -739,6 +775,82 @@ private fun DefaultsSection(
     SwitchRow("System Extensions", defaults.systemExtensions) {
         onDefaultsChange(defaults.copy(systemExtensions = it))
     }
+}
+
+/**
+ * Languages modal (capture §12.2): Accept-Language header preview,
+ * "Based on IP" toggle, searchable locale checklist (af → zu), the
+ * selected languages listed at the bottom, Cancel / Save.
+ */
+@Composable
+private fun LanguagesDialog(
+    initialSelected: List<String>,
+    basedOnIp: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (List<String>, Boolean) -> Unit
+) {
+    var query by remember { mutableStateOf("") }
+    var selected by remember { mutableStateOf(initialSelected) }
+    var auto by remember { mutableStateOf(basedOnIp) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Languages") },
+        text = {
+            Column {
+                Text(
+                    "Accept-Language header: ${CaptureData.acceptLanguageHeader(selected)}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                SwitchRow("Based on IP", auto) { auto = it }
+                OutlinedTextField(
+                    value = query, onValueChange = { query = it },
+                    label = { Text("Search languages") },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true
+                )
+                Spacer(Modifier.height(6.dp))
+                Column(
+                    modifier = Modifier
+                        .height(260.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    CaptureData.localeOptions
+                        .filter { (tag, name) ->
+                            query.isBlank() || tag.contains(query, ignoreCase = true) ||
+                                name.contains(query, ignoreCase = true)
+                        }
+                        .forEach { (tag, name) ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selected = if (tag in selected) selected - tag else selected + tag
+                                    }
+                            ) {
+                                Checkbox(
+                                    checked = tag in selected,
+                                    onCheckedChange = {
+                                        selected = if (it) selected + tag else selected - tag
+                                    }
+                                )
+                                Text("$name ($tag)")
+                            }
+                        }
+                }
+                if (selected.isNotEmpty()) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Selected: ${selected.joinToString(", ")}",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(selected, auto) }) { Text("Save") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 @Composable
@@ -844,6 +956,13 @@ private fun ApiSection() {
             "for instance, automate some processes by using self-written bots. Keep in mind " +
             "that you must be able to program on your own to use our API."
     )
+    Text(
+        "Note: full API access is available on paid plans.",
+        style = MaterialTheme.typography.bodySmall
+    )
+    TextButton(onClick = {
+        Toast.makeText(context, "Plans live in Settings → Billing Plans", Toast.LENGTH_SHORT).show()
+    }) { Text("Pay now") }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf("Postman", "GitHub", "MCP", "API").forEach { label ->
             OutlinedButton(onClick = {
@@ -912,6 +1031,14 @@ private fun VaultSection() {
 
 @Composable
 private fun UsageSection() {
+    val context = LocalContext.current
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        FilterChip(selected = true, onClick = { }, label = { Text("Last 7 days") })
+        Spacer(Modifier.weight(1f))
+        TextButton(onClick = {
+            Toast.makeText(context, "Plans live in Settings → Billing Plans", Toast.LENGTH_SHORT).show()
+        }) { Text("Upgrade plan") }
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(
             "Total launches" to "0",
@@ -944,7 +1071,36 @@ private fun MembersSection(
     onStoreChange: (Store) -> Unit
 ) {
     val workspace = store.workspaces.firstOrNull()
-    Text(workspace?.name ?: "My workspace", style = MaterialTheme.typography.titleMedium)
+    var showRenameWs by remember { mutableStateOf(false) }
+    var wsName by remember { mutableStateOf("") }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(workspace?.name ?: "My workspace", style = MaterialTheme.typography.titleMedium)
+        TextButton(onClick = {
+            wsName = workspace?.name ?: ""
+            showRenameWs = true
+        }) { Text("✎") }
+    }
+    if (showRenameWs) {
+        AlertDialog(
+            onDismissRequest = { showRenameWs = false },
+            title = { Text("Workspace name") },
+            text = {
+                OutlinedTextField(value = wsName, onValueChange = { wsName = it }, singleLine = true)
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val ws = workspace
+                    if (wsName.isNotBlank() && ws != null) {
+                        onStoreChange(store.copy(workspaces = store.workspaces.map { item ->
+                            if (item.id == ws.id) item.copy(name = wsName.trim()) else item
+                        }))
+                    }
+                    showRenameWs = false
+                }) { Text("Save") }
+            },
+            dismissButton = { TextButton(onClick = { showRenameWs = false }) { Text("Cancel") } }
+        )
+    }
     Text("${store.members.size + 1}/${store.members.size + 1} users joined", style = MaterialTheme.typography.bodySmall)
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Text("Profiles Cloud Sync", modifier = Modifier.weight(1f))
@@ -1094,6 +1250,17 @@ private fun RestoreSection(store: Store, onStoreChange: (Store) -> Unit) {
         style = MaterialTheme.typography.bodySmall
     )
     val deleted = store.profiles.filter { it.deletedAt != null }
+    Row {
+        Spacer(Modifier.weight(1f))
+        Button(
+            onClick = {
+                onStoreChange(store.copy(profiles = store.profiles.map {
+                    if (it.deletedAt != null) it.copy(deletedAt = null, updatedAt = ProfileStore.nowIso()) else it
+                }))
+            },
+            enabled = deleted.isNotEmpty()
+        ) { Text("Restore all") }
+    }
     if (deleted.isEmpty()) {
         Text(
             "No profiles yet",

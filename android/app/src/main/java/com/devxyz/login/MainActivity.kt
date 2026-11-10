@@ -140,15 +140,29 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
 
     fun newProfile(): Profile {
         val now = ProfileStore.nowIso()
-        // GoLogin editor parity (capture §4): name auto-increments
-        // "profile N", OS default is Linux, bookmarks start from the
-        // editor-variant default list.
-        val nextNumber = store.profiles.count { it.deletedAt == null } + 1
+        // GoLogin editor parity (capture §4): the name auto-increments
+        // "profile N" (the Default-profile-settings name template, with
+        // {number} substituted), the OS default is Linux, the Proxy
+        // segment default is the built-in proxy (France / Residential),
+        // and bookmarks start from the editor-variant default list.
+        val usedNumbers = store.profiles.mapNotNull { p ->
+            Regex("""^profile (\d+)$""").find(p.name.trim())?.groupValues?.get(1)?.toIntOrNull()
+        }
+        val nextNumber = (usedNumbers.maxOrNull() ?: 0) + 1
+        val template = defaults.profileNameTemplate
+        val name = if (template.contains("{number}")) template.replace("{number}", nextNumber.toString())
+        else "profile $nextNumber"
         return Profile(
             id = ProfileStore.newId(),
-            name = "profile $nextNumber",
+            name = name,
             os = "linux",
             fingerprint = FingerprintGenerator.generate("linux"),
+            proxy = com.devxyz.login.model.ProxyConfig(
+                mode = "devxyz",
+                type = "http",
+                host = "geo.devxyzlogin.local",
+                port = 10080
+            ),
             bookmarks = DefaultBookmarks.editorLines,
             createdAt = now, updatedAt = now
         )
@@ -269,8 +283,13 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
                     onClick = { navigate(Screen.SettingsHub) }
                 )
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Filled.Logout, contentDescription = null) },
-                    label = { Text("Log out") },
+                    icon = {
+                        Icon(
+                            Icons.Filled.Logout, contentDescription = null,
+                            tint = com.devxyz.login.ui.DangerRed
+                        )
+                    },
+                    label = { Text("Log out", color = com.devxyz.login.ui.DangerRed) },
                     selected = false,
                     onClick = { showLogoutConfirm = true }
                 )
@@ -337,6 +356,7 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
                         initial = s.profile,
                         isNew = s.isNew,
                         folders = store.folders,
+                        savedProxies = store.proxies,
                         onSave = { saved ->
                             updateStore(
                                 if (s.isNew) store.copy(profiles = store.profiles + saved)

@@ -16,7 +16,10 @@ data class NavigatorInfo(
     val platform: String = "Win32",
     val cpuCores: Int = 8,
     val ram: Int = 8,
-    val doNotTrack: Boolean = false
+    val doNotTrack: Boolean = false,
+    /** v3 (additive): Languages "Based on IP" toggle (capture §4.7) — in v2
+     *  this was wrongly tied to the timezone auto flag. */
+    val languagesAuto: Boolean = true
 )
 
 @Serializable
@@ -61,6 +64,8 @@ data class GeolocationInfo(
 data class Fingerprint(
     val navigator: NavigatorInfo = NavigatorInfo(),
     val fontsMasking: Boolean = true,
+    /** v3 (additive): "Mask Media Devices" toggle (capture §4.7, default ON). */
+    val mediaMasking: Boolean = true,
     val mediaDevices: MediaDevices = MediaDevices(),
     val hardware: HardwareInfo = HardwareInfo(),
     /** "basedOnIp" | "off" | "disabled" */
@@ -78,7 +83,16 @@ data class ProxyConfig(
     val host: String = "",
     val port: Int = 0,
     val username: String = "",
-    val password: String = ""
+    val password: String = "",
+    /** v3 (additive, same names as web v3): built-in proxy country (ISO
+     *  alpha-2, capture default France) and kind — "Residential" (default) |
+     *  "Mobile" | "Data Center". Only meaningful when mode == "devxyz". */
+    val buyCountry: String = "FR",
+    val buyType: String = "Residential",
+    /** v3 (additive): "Buy dedicated IP" segment selected (capture §4.2). */
+    val dedicated: Boolean = false,
+    /** v3 (additive): "Change IP URL for mobile proxy" (capture §4.2). */
+    val changeIpUrl: String = ""
 ) {
     val isSet: Boolean get() = mode != "none" && host.isNotBlank() && port > 0
     /** Short label for the profile list, e.g. "SOCKS5 • 1.2.3.4:1080" or "No proxy". */
@@ -109,7 +123,11 @@ data class BrowserOptions(
     val extensionStorage: Boolean = true,
     val indexedDb: Boolean = true,
     val vulnerablePlugins: Boolean = true,
-    val systemExtensions: Boolean = false
+    val systemExtensions: Boolean = false,
+    /** v3 (additive): quick-settings Storage rows (capture §5) — "Save tabs"
+     *  and "Allow install extensions", both ON in GoLogin. */
+    val saveTabs: Boolean = true,
+    val allowInstallExtensions: Boolean = true
 )
 
 @Serializable
@@ -153,7 +171,10 @@ data class Workspace(
 data class SharedProxy(
     val id: String,
     val name: String,
-    val proxy: ProxyConfig
+    val proxy: ProxyConfig,
+    /** v3 (additive, web v3 parity): country name + flag for the proxies table. */
+    val country: String = "",
+    val flag: String = ""
 )
 
 /** Whole local store, persisted as one JSON file (store.json). */

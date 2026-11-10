@@ -213,6 +213,7 @@ tr:hover .row-check,.row-check.on{visibility:visible}
 .combo-list{position:absolute;top:44px;left:0;right:0;background:var(--modal);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);max-height:260px;overflow-y:auto;z-index:60;padding:5px}
 .combo-list button{display:flex;gap:9px;align-items:center;width:100%;border:none;background:none;padding:8px 10px;border-radius:7px;font-size:13.5px;color:var(--ink);text-align:left}
 .combo-list button:hover,.combo-list button.sel{background:var(--selopt)}
+.combo-more{padding:8px 10px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line)}
 
 /* ---------- cards / proxies ---------- */
 .px-tabs{display:flex;gap:8px;align-items:center;margin-bottom:16px}
@@ -317,7 +318,7 @@ tr:hover .row-check,.row-check.on{visibility:visible}
 .lang-row{display:flex;gap:9px;align-items:center;width:100%;border:none;background:none;padding:7px 9px;border-radius:7px;font-size:13.5px;color:var(--ink);text-align:left}
 .lang-row:hover{background:var(--hover)}
 .sel-lang-row{display:flex;gap:9px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 11px;margin-bottom:8px;background:var(--card)}
-@media (max-width:900px){#sidebar{display:none}.px-grid{grid-template-columns:1fr}.plan-grid{grid-template-columns:1fr 1fr}.ed-grid{flex-direction:column}.ed-summary{width:100%;flex:none}.two-col{grid-template-columns:1fr}.login-right{display:none}}
+@media (max-width:900px){#sidebar{display:none}#topbar .top-pill{display:none}.px-grid{grid-template-columns:1fr}.plan-grid{grid-template-columns:1fr 1fr}.ed-grid{flex-direction:column}.ed-summary{width:100%;flex:none}.two-col{grid-template-columns:1fr}.login-right{display:none}}
 </style>
 </head>
 <body>
@@ -354,23 +355,61 @@ const nowStr=()=>fmtDate(new Date());
 const TAG_COLORS=["#4d7cff","#22c07a","#e8a13a","#e5534b","#9b6cff","#21b8c7","#e56bb1"];
 const STATUS_FIELDS=[{text:"New",color:"#4d7cff"},{text:"Warming",color:"#e8a13a"},{text:"Active",color:"#22c07a"},{text:"Banned",color:"#e5534b"},{text:"Paused",color:"#8b96ab"}];
 const TIMEZONES=["UTC","America/New_York","America/Chicago","America/Denver","America/Los_Angeles","Europe/London","Europe/Berlin","Europe/Paris","Europe/Moscow","Asia/Dubai","Asia/Kolkata","Asia/Singapore","Asia/Manila","Asia/Tokyo","Asia/Shanghai","Australia/Sydney","Pacific/Auckland"];
-/* Country list (~64 majors). Editor order mirrors capture: France, Germany, United Kingdom, United States, Australia first. */
+/* Full ISO 3166-1 country list (249 entries). Editor order mirrors capture: France, Germany, United Kingdom, United States, Australia first, then A-Z. */
 const COUNTRIES=[
  ["FR","France","🇫🇷"],["DE","Germany","🇩🇪"],["GB","United Kingdom","🇬🇧"],["US","United States","🇺🇸"],["AU","Australia","🇦🇺"],
- ["PH","Philippines","🇵🇭"],["SG","Singapore","🇸🇬"],["JP","Japan","🇯🇵"],["NL","Netherlands","🇳🇱"],["CA","Canada","🇨🇦"],
- ["ES","Spain","🇪🇸"],["IT","Italy","🇮🇹"],["PT","Portugal","🇵🇹"],["IE","Ireland","🇮🇪"],["CH","Switzerland","🇨🇭"],
- ["AT","Austria","🇦🇹"],["BE","Belgium","🇧🇪"],["SE","Sweden","🇸🇪"],["NO","Norway","🇳🇴"],["DK","Denmark","🇩🇰"],
- ["FI","Finland","🇫🇮"],["PL","Poland","🇵🇱"],["CZ","Czechia","🇨🇿"],["HU","Hungary","🇭🇺"],["RO","Romania","🇷🇴"],
- ["GR","Greece","🇬🇷"],["TR","Turkey","🇹🇷"],["IL","Israel","🇮🇱"],["AE","United Arab Emirates","🇦🇪"],["SA","Saudi Arabia","🇸🇦"],
- ["IN","India","🇮🇳"],["ID","Indonesia","🇮🇩"],["MY","Malaysia","🇲🇾"],["TH","Thailand","🇹🇭"],["VN","Vietnam","🇻🇳"],
- ["KR","South Korea","🇰🇷"],["TW","Taiwan","🇹🇼"],["HK","Hong Kong","🇭🇰"],["CN","China","🇨🇳"],["RU","Russia","🇷🇺"],
- ["UA","Ukraine","🇺🇦"],["BR","Brazil","🇧🇷"],["MX","Mexico","🇲🇽"],["AR","Argentina","🇦🇷"],["CL","Chile","🇨🇱"],
- ["CO","Colombia","🇨🇴"],["PE","Peru","🇵🇪"],["ZA","South Africa","🇿🇦"],["NG","Nigeria","🇳🇬"],["KE","Kenya","🇰🇪"],
- ["EG","Egypt","🇪🇬"],["MA","Morocco","🇲🇦"],["NZ","New Zealand","🇳🇿"],["PK","Pakistan","🇵🇰"],["BD","Bangladesh","🇧🇩"],
- ["LK","Sri Lanka","🇱🇰"],["MM","Myanmar","🇲🇲"],["KH","Cambodia","🇰🇭"],["UZ","Uzbekistan","🇺🇿"],["KZ","Kazakhstan","🇰🇿"],
- ["GE","Georgia","🇬🇪"],["RS","Serbia","🇷🇸"],["BG","Bulgaria","🇧🇬"],["HR","Croatia","🇭🇷"],["LT","Lithuania","🇱🇹"]
+ ["AF","Afghanistan","🇦🇫"],["AX","Åland Islands","🇦🇽"],["AL","Albania","🇦🇱"],["DZ","Algeria","🇩🇿"],["AS","American Samoa","🇦🇸"],
+ ["AD","Andorra","🇦🇩"],["AO","Angola","🇦🇴"],["AI","Anguilla","🇦🇮"],["AQ","Antarctica","🇦🇶"],["AG","Antigua and Barbuda","🇦🇬"],
+ ["AR","Argentina","🇦🇷"],["AM","Armenia","🇦🇲"],["AW","Aruba","🇦🇼"],["AT","Austria","🇦🇹"],["AZ","Azerbaijan","🇦🇿"],
+ ["BS","Bahamas","🇧🇸"],["BH","Bahrain","🇧🇭"],["BD","Bangladesh","🇧🇩"],["BB","Barbados","🇧🇧"],["BY","Belarus","🇧🇾"],
+ ["BE","Belgium","🇧🇪"],["BZ","Belize","🇧🇿"],["BJ","Benin","🇧🇯"],["BM","Bermuda","🇧🇲"],["BT","Bhutan","🇧🇹"],
+ ["BO","Bolivia","🇧🇴"],["BQ","Bonaire, Sint Eustatius and Saba","🇧🇶"],["BA","Bosnia and Herzegovina","🇧🇦"],["BW","Botswana","🇧🇼"],["BV","Bouvet Island","🇧🇻"],
+ ["BR","Brazil","🇧🇷"],["IO","British Indian Ocean Territory","🇮🇴"],["BN","Brunei","🇧🇳"],["BG","Bulgaria","🇧🇬"],["BF","Burkina Faso","🇧🇫"],
+ ["BI","Burundi","🇧🇮"],["CV","Cabo Verde","🇨🇻"],["KH","Cambodia","🇰🇭"],["CM","Cameroon","🇨🇲"],["CA","Canada","🇨🇦"],
+ ["KY","Cayman Islands","🇰🇾"],["CF","Central African Republic","🇨🇫"],["TD","Chad","🇹🇩"],["CL","Chile","🇨🇱"],["CN","China","🇨🇳"],
+ ["CX","Christmas Island","🇨🇽"],["CC","Cocos (Keeling) Islands","🇨🇨"],["CO","Colombia","🇨🇴"],["KM","Comoros","🇰🇲"],["CG","Congo","🇨🇬"],
+ ["CD","Congo (DRC)","🇨🇩"],["CK","Cook Islands","🇨🇰"],["CR","Costa Rica","🇨🇷"],["CI","Côte d'Ivoire","🇨🇮"],["HR","Croatia","🇭🇷"],
+ ["CU","Cuba","🇨🇺"],["CW","Curaçao","🇨🇼"],["CY","Cyprus","🇨🇾"],["CZ","Czechia","🇨🇿"],["DK","Denmark","🇩🇰"],
+ ["DJ","Djibouti","🇩🇯"],["DM","Dominica","🇩🇲"],["DO","Dominican Republic","🇩🇴"],["EC","Ecuador","🇪🇨"],["EG","Egypt","🇪🇬"],
+ ["SV","El Salvador","🇸🇻"],["GQ","Equatorial Guinea","🇬🇶"],["ER","Eritrea","🇪🇷"],["EE","Estonia","🇪🇪"],["SZ","Eswatini","🇸🇿"],
+ ["ET","Ethiopia","🇪🇹"],["FK","Falkland Islands","🇫🇰"],["FO","Faroe Islands","🇫🇴"],["FJ","Fiji","🇫🇯"],["FI","Finland","🇫🇮"],
+ ["GF","French Guiana","🇬🇫"],["PF","French Polynesia","🇵🇫"],["TF","French Southern Territories","🇹🇫"],["GA","Gabon","🇬🇦"],["GM","Gambia","🇬🇲"],
+ ["GE","Georgia","🇬🇪"],["GH","Ghana","🇬🇭"],["GI","Gibraltar","🇬🇮"],["GR","Greece","🇬🇷"],["GL","Greenland","🇬🇱"],
+ ["GD","Grenada","🇬🇩"],["GP","Guadeloupe","🇬🇵"],["GU","Guam","🇬🇺"],["GT","Guatemala","🇬🇹"],["GG","Guernsey","🇬🇬"],
+ ["GN","Guinea","🇬🇳"],["GW","Guinea-Bissau","🇬🇼"],["GY","Guyana","🇬🇾"],["HT","Haiti","🇭🇹"],["HM","Heard Island and McDonald Islands","🇭🇲"],
+ ["VA","Holy See","🇻🇦"],["HN","Honduras","🇭🇳"],["HK","Hong Kong","🇭🇰"],["HU","Hungary","🇭🇺"],["IS","Iceland","🇮🇸"],
+ ["IN","India","🇮🇳"],["ID","Indonesia","🇮🇩"],["IR","Iran","🇮🇷"],["IQ","Iraq","🇮🇶"],["IE","Ireland","🇮🇪"],
+ ["IM","Isle of Man","🇮🇲"],["IL","Israel","🇮🇱"],["IT","Italy","🇮🇹"],["JM","Jamaica","🇯🇲"],["JP","Japan","🇯🇵"],
+ ["JE","Jersey","🇯🇪"],["JO","Jordan","🇯🇴"],["KZ","Kazakhstan","🇰🇿"],["KE","Kenya","🇰🇪"],["KI","Kiribati","🇰🇮"],
+ ["KP","North Korea","🇰🇵"],["KR","South Korea","🇰🇷"],["XK","Kosovo","🇽🇰"],["KW","Kuwait","🇰🇼"],["KG","Kyrgyzstan","🇰🇬"],
+ ["LA","Laos","🇱🇦"],["LV","Latvia","🇱🇻"],["LB","Lebanon","🇱🇧"],["LS","Lesotho","🇱🇸"],["LR","Liberia","🇱🇷"],
+ ["LY","Libya","🇱🇾"],["LI","Liechtenstein","🇱🇮"],["LT","Lithuania","🇱🇹"],["LU","Luxembourg","🇱🇺"],["MO","Macao","🇲🇴"],
+ ["MG","Madagascar","🇲🇬"],["MW","Malawi","🇲🇼"],["MY","Malaysia","🇲🇾"],["MV","Maldives","🇲🇻"],["ML","Mali","🇲🇱"],
+ ["MT","Malta","🇲🇹"],["MH","Marshall Islands","🇲🇭"],["MQ","Martinique","🇲🇶"],["MR","Mauritania","🇲🇷"],["MU","Mauritius","🇲🇺"],
+ ["YT","Mayotte","🇾🇹"],["MX","Mexico","🇲🇽"],["FM","Micronesia","🇫🇲"],["MD","Moldova","🇲🇩"],["MC","Monaco","🇲🇨"],
+ ["MN","Mongolia","🇲🇳"],["ME","Montenegro","🇲🇪"],["MS","Montserrat","🇲🇸"],["MA","Morocco","🇲🇦"],["MZ","Mozambique","🇲🇿"],
+ ["MM","Myanmar","🇲🇲"],["NA","Namibia","🇳🇦"],["NR","Nauru","🇳🇷"],["NP","Nepal","🇳🇵"],["NL","Netherlands","🇳🇱"],
+ ["NC","New Caledonia","🇳🇨"],["NZ","New Zealand","🇳🇿"],["NI","Nicaragua","🇳🇮"],["NE","Niger","🇳🇪"],["NG","Nigeria","🇳🇬"],
+ ["NU","Niue","🇳🇺"],["NF","Norfolk Island","🇳🇫"],["MK","North Macedonia","🇲🇰"],["MP","Northern Mariana Islands","🇲🇵"],["NO","Norway","🇳🇴"],
+ ["OM","Oman","🇴🇲"],["PK","Pakistan","🇵🇰"],["PW","Palau","🇵🇼"],["PS","Palestine","🇵🇸"],["PA","Panama","🇵🇦"],
+ ["PG","Papua New Guinea","🇵🇬"],["PY","Paraguay","🇵🇾"],["PE","Peru","🇵🇪"],["PH","Philippines","🇵🇭"],["PN","Pitcairn","🇵🇳"],
+ ["PL","Poland","🇵🇱"],["PT","Portugal","🇵🇹"],["PR","Puerto Rico","🇵🇷"],["QA","Qatar","🇶🇦"],["RE","Réunion","🇷🇪"],
+ ["RO","Romania","🇷🇴"],["RU","Russia","🇷🇺"],["RW","Rwanda","🇷🇼"],["BL","Saint Barthélemy","🇧🇱"],["SH","Saint Helena","🇸🇭"],
+ ["KN","Saint Kitts and Nevis","🇰🇳"],["LC","Saint Lucia","🇱🇨"],["MF","Saint Martin","🇲🇫"],["PM","Saint Pierre and Miquelon","🇵🇲"],["VC","Saint Vincent and the Grenadines","🇻🇨"],
+ ["WS","Samoa","🇼🇸"],["SM","San Marino","🇸🇲"],["ST","Sao Tome and Principe","🇸🇹"],["SA","Saudi Arabia","🇸🇦"],["SN","Senegal","🇸🇳"],
+ ["RS","Serbia","🇷🇸"],["SC","Seychelles","🇸🇨"],["SL","Sierra Leone","🇸🇱"],["SG","Singapore","🇸🇬"],["SX","Sint Maarten","🇸🇽"],
+ ["SK","Slovakia","🇸🇰"],["SI","Slovenia","🇸🇮"],["SB","Solomon Islands","🇸🇧"],["SO","Somalia","🇸🇴"],["ZA","South Africa","🇿🇦"],
+ ["GS","South Georgia and the South Sandwich Islands","🇬🇸"],["SS","South Sudan","🇸🇸"],["ES","Spain","🇪🇸"],["LK","Sri Lanka","🇱🇰"],["SD","Sudan","🇸🇩"],
+ ["SR","Suriname","🇸🇷"],["SJ","Svalbard and Jan Mayen","🇸🇯"],["SE","Sweden","🇸🇪"],["CH","Switzerland","🇨🇭"],["SY","Syria","🇸🇾"],
+ ["TW","Taiwan","🇹🇼"],["TJ","Tajikistan","🇹🇯"],["TZ","Tanzania","🇹🇿"],["TH","Thailand","🇹🇭"],["TL","Timor-Leste","🇹🇱"],
+ ["TG","Togo","🇹🇬"],["TK","Tokelau","🇹🇰"],["TO","Tonga","🇹🇴"],["TT","Trinidad and Tobago","🇹🇹"],["TN","Tunisia","🇹🇳"],
+ ["TR","Turkey","🇹🇷"],["TM","Turkmenistan","🇹🇲"],["TC","Turks and Caicos Islands","🇹🇨"],["TV","Tuvalu","🇹🇻"],["UG","Uganda","🇺🇬"],
+ ["UA","Ukraine","🇺🇦"],["AE","United Arab Emirates","🇦🇪"],["UM","United States Minor Outlying Islands","🇺🇲"],["UY","Uruguay","🇺🇾"],["UZ","Uzbekistan","🇺🇿"],
+ ["VU","Vanuatu","🇻🇺"],["VE","Venezuela","🇻🇪"],["VN","Vietnam","🇻🇳"],["VG","Virgin Islands (British)","🇻🇬"],["VI","Virgin Islands (U.S.)","🇻🇮"],
+ ["EH","Western Sahara","🇪🇭"],["YE","Yemen","🇾🇪"],["ZM","Zambia","🇿🇲"],["ZW","Zimbabwe","🇿🇼"]
 ];
 const countryByCode=c=>COUNTRIES.find(x=>x[0]===c)||["US","United States","🇺🇸"];
+/* Capture resolution list, ascending. "1366x768" and "1440x900" are standard FILLS for the capture's virtualized mid-list gap (kept flagged per capture notes). */
 const RESOLUTIONS=["800x600","960x720","1024x576","1024x600","1024x640","1024x768","1152x648","1152x864","1280x720","1280x768","1366x768","1440x900","1512x982","1536x864","1600x900","1600x1200","1680x1050","1710x1107","1728x1117","1856x1392","1920x1080","1920x1200","1920x1440","2048x1152","2048x1536","2304x1440","2560x1080","2560x1440","2560x1600","2560x1664","2560x2048","2880x1800","3440x1440"];
 const BROWSER_VERSIONS=["156","154","153","152","151","150","149","148","147","146","145","144","143","142","141","140","139","138","137","136","135","134","133","132","131","130","129","128","127","126","125","124","123","122","121","120","119","118","117","116","115","114","113","112","111"]; /* 155 absent, per capture */
 const CPU_LIST=[2,4,6,8,10,12,16,20,24,32], RAM_LIST=[1,2,4,6,8,16,32];
@@ -378,18 +417,18 @@ const WEBGL_VENDORS=["ARM","Apple Inc.","Brave","Google Inc. (AMD)","Google Inc.
 const WEBGL_RENDERERS={
  "Qualcomm":["610","618","619","650","710","730","735","750","810","829","830"].map(m=>"ANGLE (Qualcomm, Adreno (TM) "+m+", OpenGL ES 3.2)"),
  "Google Inc. (Qualcomm)":["610","618","619","650","710","730","735","750","810","829","830"].map(m=>"ANGLE (Qualcomm, Adreno (TM) "+m+", OpenGL ES 3.2)"),
- "ARM":["ANGLE (ARM, Mali-G610, OpenGL ES 3.2)","ANGLE (ARM, Mali-G615 MC2, OpenGL ES 3.2)","ANGLE (ARM, Mali-G710 MC10, OpenGL ES 3.2)","ANGLE (ARM, Mali-G78, OpenGL ES 3.2)"],
- "Google Inc. (ARM)":["ANGLE (ARM, Mali-G610, OpenGL ES 3.2)","ANGLE (ARM, Mali-G615 MC2, OpenGL ES 3.2)","ANGLE (ARM, Mali-G710 MC10, OpenGL ES 3.2)"],
- "Apple Inc.":["ANGLE (Apple, Apple M1, OpenGL 4.1)","ANGLE (Apple, Apple M2, OpenGL 4.1)","ANGLE (Apple, Apple M3, OpenGL 4.1)"],
- "Google Inc. (Apple)":["ANGLE (Apple, Apple M1, OpenGL 4.1)","ANGLE (Apple, Apple M2, OpenGL 4.1)","ANGLE (Apple, Apple M3, OpenGL 4.1)"],
- "Google Inc. (Intel)":["ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0, D3D11)","ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)"],
- "Google Inc. (Intel Inc.)":["ANGLE (Intel Inc., Intel(R) Iris(TM) Plus Graphics 640, OpenGL 4.1)","ANGLE (Intel Inc., Intel(R) UHD Graphics 630, OpenGL 4.1)"],
- "Intel Inc.":["ANGLE (Intel Inc., Intel(R) Iris(TM) Plus Graphics 640, OpenGL 4.1)","ANGLE (Intel Inc., Intel(R) UHD Graphics 630, OpenGL 4.1)"],
- "Google Inc. (NVIDIA)":["ANGLE (NVIDIA, NVIDIA GeForce GTX 1660 Direct3D11 vs_5_0 ps_5_0, D3D11)","ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)"],
- "Google Inc. (NVIDIA Corporation)":["ANGLE (NVIDIA Corporation, NVIDIA GeForce GTX 1660, OpenGL 4.5)","ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 4070, OpenGL 4.5)"],
- "Google Inc. (AMD)":["ANGLE (AMD, AMD Radeon RX 6600 Direct3D11 vs_5_0 ps_5_0, D3D11)","ANGLE (AMD, AMD Radeon(TM) Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)"],
- "Google Inc. (Microsoft)":["ANGLE (Microsoft, Microsoft Basic Render Driver Direct3D11 vs_5_0 ps_5_0, D3D11)"],
- "Brave":["ANGLE (Google Inc., Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)"]
+ "ARM":["ANGLE (ARM, Mali-G78, OpenGL ES 3.2)","ANGLE (ARM, Mali-G710, OpenGL ES 3.2)","ANGLE (ARM, Mali-G715, OpenGL ES 3.2)","ANGLE (ARM, Mali-G615, OpenGL ES 3.2)","ANGLE (ARM, Mali-G610, OpenGL ES 3.2)"],
+ "Google Inc. (ARM)":["ANGLE (ARM, Mali-G78, OpenGL ES 3.2)","ANGLE (ARM, Mali-G710, OpenGL ES 3.2)","ANGLE (ARM, Mali-G715, OpenGL ES 3.2)","ANGLE (ARM, Mali-G615, OpenGL ES 3.2)","ANGLE (ARM, Mali-G610, OpenGL ES 3.2)"],
+ "Apple Inc.":["ANGLE (Apple, Apple M1, OpenGL ES 3.2)","ANGLE (Apple, Apple M2, OpenGL ES 3.2)","ANGLE (Apple, Apple M3, OpenGL ES 3.2)","ANGLE (Apple, Apple M1 Pro, OpenGL ES 3.2)"],
+ "Google Inc. (Apple)":["ANGLE (Apple, Apple M1, OpenGL ES 3.2)","ANGLE (Apple, Apple M2, OpenGL ES 3.2)","ANGLE (Apple, Apple M3, OpenGL ES 3.2)","ANGLE (Apple, Apple M1 Pro, OpenGL ES 3.2)"],
+ "Google Inc. (Intel)":["ANGLE (Intel, Intel(R) UHD Graphics 620, OpenGL ES 3.2)","ANGLE (Intel, Intel(R) UHD Graphics 630, OpenGL ES 3.2)","ANGLE (Intel, Intel(R) Iris(R) Xe Graphics, OpenGL ES 3.2)","ANGLE (Intel, Intel(R) HD Graphics 620, OpenGL ES 3.2)"],
+ "Google Inc. (Intel Inc.)":["ANGLE (Intel Inc., Intel(R) Iris(TM) Plus Graphics 640, OpenGL ES 3.2)","ANGLE (Intel Inc., Intel(R) UHD Graphics 630, OpenGL ES 3.2)","ANGLE (Intel Inc., Intel(R) Iris(TM) Plus Graphics 655, OpenGL ES 3.2)"],
+ "Intel Inc.":["ANGLE (Intel Inc., Intel(R) Iris(TM) Plus Graphics 640, OpenGL ES 3.2)","ANGLE (Intel Inc., Intel(R) UHD Graphics 630, OpenGL ES 3.2)","ANGLE (Intel Inc., Intel(R) Iris(TM) Plus Graphics 655, OpenGL ES 3.2)"],
+ "Google Inc. (NVIDIA)":["ANGLE (NVIDIA, NVIDIA GeForce GTX 1650, OpenGL ES 3.2)","ANGLE (NVIDIA, NVIDIA GeForce GTX 1660 SUPER, OpenGL ES 3.2)","ANGLE (NVIDIA, NVIDIA GeForce RTX 3060, OpenGL ES 3.2)","ANGLE (NVIDIA, NVIDIA GeForce RTX 4060, OpenGL ES 3.2)"],
+ "Google Inc. (NVIDIA Corporation)":["ANGLE (NVIDIA Corporation, NVIDIA GeForce GTX 1650/PCIe/SSE2, OpenGL 4.6)","ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 3060/PCIe/SSE2, OpenGL 4.6)","ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 4060/PCIe/SSE2, OpenGL 4.6)"],
+ "Google Inc. (AMD)":["ANGLE (AMD, AMD Radeon RX 580, OpenGL ES 3.2)","ANGLE (AMD, AMD Radeon(TM) Graphics, OpenGL ES 3.2)","ANGLE (AMD, AMD Radeon RX 6600, OpenGL ES 3.2)"],
+ "Google Inc. (Microsoft)":["ANGLE (Microsoft, Microsoft Basic Render Driver, OpenGL ES 3.2)","ANGLE (Microsoft, Microsoft Basic Render Driver Direct3D11 vs_5_0 ps_5_0, D3D11)"],
+ "Brave":["ANGLE (Brave, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)","ANGLE (Brave, Metal Renderer: Apple M1, Unspecified Version)","ANGLE (Brave, Metal Renderer: Apple M2, Unspecified Version)"]
 };
 const FONT_POOL=["AIGDT","AMGDT","Abyssinica Sil Regular","Alef","Ani","AnjaliOldLipi","Caladea","Chandas","Arial","Calibri","Segoe UI","Tahoma","Verdana","Helvetica","Menlo","Monaco","Georgia","DejaVu Sans","Liberation Sans","Ubuntu","Noto Sans","Roboto","Droid Sans","Times New Roman","Courier New","Comic Sans MS","Trebuchet MS","Impact"];
 const EXT_CATALOG=["uBlock Origin","AdGuard AdBlocker","Ghostery","MetaMask","LastPass","Grammarly","Tampermonkey","Cookie Editor","WebRTC Leak Shield","User-Agent Switcher"];
@@ -1350,7 +1389,8 @@ function countryCombo(val,cb){
   const c=countryByCode(val);
   const input=inp(c[2]+" "+c[1]); input.readOnly=false;
   const list=document.createElement("div"); list.className="combo-list hidden";
-  const renderList=q=>{list.innerHTML=COUNTRIES.filter(x=>!q||x[1].toLowerCase().includes(q)||x[0].toLowerCase().includes(q)).map(x=>'<button data-c="'+x[0]+'" class="'+(x[0]===val?"sel":"")+'">'+x[2]+" "+x[1]+'</button>').join("");
+  const renderList=q=>{const hits=COUNTRIES.filter(x=>!q||x[1].toLowerCase().includes(q)||x[0].toLowerCase().includes(q));const CAP=60; /* chunked render: full 249-country list is filtered on type; only the first chunk is painted */
+    list.innerHTML=hits.slice(0,CAP).map(x=>'<button data-c="'+x[0]+'" class="'+(x[0]===val?"sel":"")+'">'+x[2]+" "+x[1]+'</button>').join("")+(hits.length>CAP?'<div class="combo-more">+'+(hits.length-CAP)+' more — type to filter</div>':"")+(hits.length===0?'<div class="combo-more">No matches</div>':"");
     list.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{const cc=countryByCode(b.dataset.c);input.value=cc[2]+" "+cc[1];list.classList.add("hidden");cb(cc[0]);edSummary()})};
   input.onfocus=()=>{input.value="";renderList("");list.classList.remove("hidden")};
   input.oninput=()=>renderList(input.value.toLowerCase());

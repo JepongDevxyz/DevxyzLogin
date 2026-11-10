@@ -53,38 +53,62 @@ object CaptureData {
             "ANGLE (Qualcomm, Adreno (TM) $it, OpenGL ES 3.2)"
         }
 
-    /** WebGL Renderer list is vendor-dependent in GoLogin; Qualcomm is capture-exact,
-     *  other families follow the same ANGLE naming pattern. */
+    /** WebGL Renderer list is vendor-dependent in GoLogin. Qualcomm is the
+     *  capture-verbatim Adreno set; the other families use the canonical
+     *  ANGLE renderer strings for those GPU families (Mali / Apple
+     *  M-series / Intel UHD+Iris / NVIDIA GeForce / AMD Radeon /
+     *  Microsoft Basic Render Driver / Brave's generic Intel string). */
     fun webglRenderersFor(vendor: String): List<String> = when (vendor) {
         "Google Inc. (Qualcomm)", "Qualcomm" -> adrenoRenderers
         "Google Inc. (ARM)", "ARM" -> listOf(
+            "ANGLE (ARM, Mali-G57 MC2, OpenGL ES 3.2)",
+            "ANGLE (ARM, Mali-G68 MC4, OpenGL ES 3.2)",
+            "ANGLE (ARM, Mali-G78, OpenGL ES 3.2)",
+            "ANGLE (ARM, Mali-G610 MC6, OpenGL ES 3.2)",
             "ANGLE (ARM, Mali-G615 MC2, OpenGL ES 3.2)",
             "ANGLE (ARM, Mali-G710 MC10, OpenGL ES 3.2)",
-            "ANGLE (ARM, Mali-G78, OpenGL ES 3.2)"
+            "ANGLE (ARM, Mali-G720 MC7, OpenGL ES 3.2)",
+            "ANGLE (ARM, Mali-G925 MC12, OpenGL ES 3.2)"
         )
         "Google Inc. (Apple)", "Apple Inc." -> listOf(
             "ANGLE (Apple, ANGLE Metal Renderer: Apple M1, Unspecified Version)",
+            "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
             "ANGLE (Apple, ANGLE Metal Renderer: Apple M2, Unspecified Version)",
+            "ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Version)",
+            "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
             "ANGLE (Apple, ANGLE Metal Renderer: Intel Iris Plus Graphics, Unspecified Version)"
         )
         "Google Inc. (Intel)", "Google Inc. (Intel Inc.)", "Intel Inc." -> listOf(
+            "ANGLE (Intel, Intel(R) HD Graphics 520 Direct3D11 vs_5_0 ps_5_0, D3D11)",
+            "ANGLE (Intel, Intel(R) HD Graphics 630 Direct3D11 vs_5_0 ps_5_0, D3D11)",
+            "ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0, D3D11)",
             "ANGLE (Intel, Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0, D3D11)",
-            "ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)",
-            "ANGLE (Intel, Intel(R) HD Graphics 520 Direct3D11 vs_5_0 ps_5_0, D3D11)"
+            "ANGLE (Intel, Intel(R) UHD Graphics 770 Direct3D11 vs_5_0 ps_5_0, D3D11)",
+            "ANGLE (Intel, Intel(R) Iris(R) Plus Graphics 655 Direct3D11 vs_5_0 ps_5_0, D3D11)",
+            "ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)"
         )
         "Google Inc. (NVIDIA)", "Google Inc. (NVIDIA Corporation)" -> listOf(
+            "ANGLE (NVIDIA, NVIDIA GeForce GTX 1650 Direct3D11 vs_5_0 ps_5_0, D3D11)",
+            "ANGLE (NVIDIA, NVIDIA GeForce GTX 1660 SUPER Direct3D11 vs_5_0 ps_5_0, D3D11)",
+            "ANGLE (NVIDIA, NVIDIA GeForce RTX 3050 Direct3D11 vs_5_0 ps_5_0, D3D11)",
             "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)",
-            "ANGLE (NVIDIA, NVIDIA GeForce GTX 1660 SUPER Direct3D11 vs_5_0 ps_5_0, D3D11)"
+            "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Direct3D11 vs_5_0 ps_5_0, D3D11)",
+            "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Direct3D11 vs_5_0 ps_5_0, D3D11)",
+            "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Direct3D11 vs_5_0 ps_5_0, D3D11)"
         )
         "Google Inc. (AMD)" -> listOf(
+            "ANGLE (AMD, AMD Radeon RX 580 Direct3D11 vs_5_0 ps_5_0, D3D11)",
             "ANGLE (AMD, AMD Radeon RX 6600 Direct3D11 vs_5_0 ps_5_0, D3D11)",
+            "ANGLE (AMD, AMD Radeon RX 6700 XT Direct3D11 vs_5_0 ps_5_0, D3D11)",
+            "ANGLE (AMD, AMD Radeon RX 7800 XT Direct3D11 vs_5_0 ps_5_0, D3D11)",
             "ANGLE (AMD, AMD Radeon(TM) Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)"
         )
         "Google Inc. (Microsoft)" -> listOf(
             "ANGLE (Microsoft, Microsoft Basic Render Driver Direct3D11 vs_5_0 ps_5_0, D3D11)"
         )
         "Brave" -> listOf(
-            "ANGLE (Intel, Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0, D3D11)"
+            "ANGLE (Intel, Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0, D3D11)",
+            "ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)"
         )
         else -> emptyList()
     }
@@ -114,7 +138,9 @@ object CaptureData {
         "ja" to "日本"
     )
 
-    /** Built-in proxy countries shown first in GoLogin's combobox (flag, name). */
+    /** Built-in proxy countries shown first in GoLogin's combobox (flag, name).
+     *  Superseded for picking by the full [Countries] list (web v3 parity);
+     *  kept for the capture record. */
     val proxyCountries: List<Pair<String, String>> = listOf(
         "FR" to "France",
         "DE" to "Germany",
@@ -122,6 +148,74 @@ object CaptureData {
         "US" to "United States",
         "AU" to "Australia"
     )
+
+    /**
+     * Languages modal checklist (Settings → Default profile settings,
+     * capture §12.2: a searchable locale checklist running af → zu).
+     * tag -> display name, ordered by tag.
+     */
+    val localeOptions: List<Pair<String, String>> = listOf(
+        "af" to "Afrikaans", "af-ZA" to "Afrikaans (South Africa)",
+        "am" to "Amharic", "ar" to "Arabic", "ar-EG" to "Arabic (Egypt)",
+        "ar-SA" to "Arabic (Saudi Arabia)", "az" to "Azerbaijani",
+        "be" to "Belarusian", "bg" to "Bulgarian", "bg-BG" to "Bulgarian (Bulgaria)",
+        "bn" to "Bengali", "bn-BD" to "Bengali (Bangladesh)", "bs" to "Bosnian",
+        "ca" to "Catalan", "cs" to "Czech", "cs-CZ" to "Czech (Czechia)",
+        "cy" to "Welsh", "da" to "Danish", "da-DK" to "Danish (Denmark)",
+        "de" to "German", "de-AT" to "German (Austria)", "de-CH" to "German (Switzerland)",
+        "de-DE" to "German (Germany)", "el" to "Greek", "el-GR" to "Greek (Greece)",
+        "en" to "English", "en-AU" to "English (Australia)", "en-CA" to "English (Canada)",
+        "en-GB" to "English (United Kingdom)", "en-IE" to "English (Ireland)",
+        "en-IN" to "English (India)", "en-NZ" to "English (New Zealand)",
+        "en-PH" to "English (Philippines)", "en-SG" to "English (Singapore)",
+        "en-US" to "English (United States)", "en-ZA" to "English (South Africa)",
+        "es" to "Spanish", "es-AR" to "Spanish (Argentina)", "es-CL" to "Spanish (Chile)",
+        "es-CO" to "Spanish (Colombia)", "es-ES" to "Spanish (Spain)",
+        "es-MX" to "Spanish (Mexico)", "es-PE" to "Spanish (Peru)",
+        "es-VE" to "Spanish (Venezuela)", "et" to "Estonian", "eu" to "Basque",
+        "fa" to "Persian", "fa-IR" to "Persian (Iran)", "fi" to "Finnish",
+        "fi-FI" to "Finnish (Finland)", "fil" to "Filipino", "fil-PH" to "Filipino (Philippines)",
+        "fr" to "French", "fr-BE" to "French (Belgium)", "fr-CA" to "French (Canada)",
+        "fr-CH" to "French (Switzerland)", "fr-FR" to "French (France)",
+        "ga" to "Irish", "gl" to "Galician", "gu" to "Gujarati", "he" to "Hebrew",
+        "he-IL" to "Hebrew (Israel)", "hi" to "Hindi", "hi-IN" to "Hindi (India)",
+        "hr" to "Croatian", "hr-HR" to "Croatian (Croatia)", "hu" to "Hungarian",
+        "hu-HU" to "Hungarian (Hungary)", "hy" to "Armenian", "id" to "Indonesian",
+        "id-ID" to "Indonesian (Indonesia)", "is" to "Icelandic", "it" to "Italian",
+        "it-CH" to "Italian (Switzerland)", "it-IT" to "Italian (Italy)",
+        "ja" to "Japanese", "ja-JP" to "Japanese (Japan)", "ka" to "Georgian",
+        "kk" to "Kazakh", "km" to "Khmer", "kn" to "Kannada", "ko" to "Korean",
+        "ko-KR" to "Korean (South Korea)", "lo" to "Lao", "lt" to "Lithuanian",
+        "lt-LT" to "Lithuanian (Lithuania)", "lv" to "Latvian", "lv-LV" to "Latvian (Latvia)",
+        "mk" to "Macedonian", "ml" to "Malayalam", "mn" to "Mongolian", "mr" to "Marathi",
+        "ms" to "Malay", "ms-MY" to "Malay (Malaysia)", "mt" to "Maltese",
+        "my" to "Burmese", "nb" to "Norwegian Bokmål", "ne" to "Nepali",
+        "nl" to "Dutch", "nl-BE" to "Dutch (Belgium)", "nl-NL" to "Dutch (Netherlands)",
+        "nn" to "Norwegian Nynorsk", "no" to "Norwegian", "pa" to "Punjabi",
+        "pl" to "Polish", "pl-PL" to "Polish (Poland)", "ps" to "Pashto",
+        "pt" to "Portuguese", "pt-BR" to "Portuguese (Brazil)", "pt-PT" to "Portuguese (Portugal)",
+        "ro" to "Romanian", "ro-RO" to "Romanian (Romania)", "ru" to "Russian",
+        "ru-RU" to "Russian (Russia)", "ru-UA" to "Russian (Ukraine)",
+        "si" to "Sinhala", "sk" to "Slovak", "sk-SK" to "Slovak (Slovakia)",
+        "sl" to "Slovenian", "sq" to "Albanian", "sr" to "Serbian",
+        "sv" to "Swedish", "sv-SE" to "Swedish (Sweden)", "sw" to "Swahili",
+        "ta" to "Tamil", "ta-IN" to "Tamil (India)", "te" to "Telugu",
+        "th" to "Thai", "th-TH" to "Thai (Thailand)", "tl" to "Tagalog",
+        "tr" to "Turkish", "tr-TR" to "Turkish (Türkiye)", "uk" to "Ukrainian",
+        "uk-UA" to "Ukrainian (Ukraine)", "ur" to "Urdu", "ur-PK" to "Urdu (Pakistan)",
+        "uz" to "Uzbek", "vi" to "Vietnamese", "vi-VN" to "Vietnamese (Vietnam)",
+        "zh" to "Chinese", "zh-CN" to "Chinese (China)", "zh-HK" to "Chinese (Hong Kong)",
+        "zh-TW" to "Chinese (Taiwan)", "zu" to "Zulu"
+    )
+
+    /** Accept-Language header preview for a selected language list
+     *  (capture §12.2 format: first tag bare, then ;q=0.9, ;q=0.8, ...). */
+    fun acceptLanguageHeader(languages: List<String>): String {
+        if (languages.isEmpty()) return ""
+        return languages.mapIndexed { i, tag ->
+            if (i == 0) tag else "$tag;q=${(10 - i) / 10.0}"
+        }.joinToString(",")
+    }
 
     /** Full build of a UA string for a Chrome major version + OS family (capture UA patterns). */
     fun uaFor(os: String, major: String, fullVersion: String): String = when (os) {
