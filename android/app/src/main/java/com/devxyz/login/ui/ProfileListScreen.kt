@@ -60,6 +60,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,7 +71,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.devxyz.login.data.ApiResult
 import com.devxyz.login.data.ProfileStore
+import com.devxyz.login.data.ServerApi
 import com.devxyz.login.model.CaptureData
 import com.devxyz.login.model.Countries
 import com.devxyz.login.model.DefaultBookmarks
@@ -80,6 +83,7 @@ import com.devxyz.login.model.OsOptions
 import com.devxyz.login.model.Profile
 import com.devxyz.login.model.ProxyConfig
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Profile list (GoLogin capture parity + Android-app evidence):
@@ -105,7 +109,9 @@ fun ProfileListScreen(
     onClone: (Profile) -> Unit,
     onDelete: (Profile) -> Unit,
     onUpdate: (Profile) -> Unit,
-    onNewProfile: () -> Unit
+    onNewProfile: () -> Unit,
+    /** v4: session token for real proxy checks in the quick sheet (null = local mode). */
+    apiToken: String? = null
 ) {
     var query by remember { mutableStateOf("") }
     // Android-app tabs: "all" | "shared" | a folder id
@@ -198,6 +204,7 @@ fun ProfileListScreen(
                         profile = profile,
                         folders = folders,
                         pinned = profile.id in pinnedIds,
+                        apiToken = apiToken,
                         onRunMode = onRunMode,
                         onStop = { onStop(profile) },
                         onEdit = { onEdit(profile) },
@@ -271,6 +278,7 @@ private fun ProfileRow(
     profile: Profile,
     folders: List<Folder>,
     pinned: Boolean,
+    apiToken: String? = null,
     onRunMode: (Profile, Boolean) -> Unit,
     onStop: () -> Unit,
     onEdit: () -> Unit,
@@ -516,7 +524,8 @@ private fun ProfileRow(
             onOpenEditor = {
                 showQuick = false
                 onEdit()
-            }
+            },
+            apiToken = apiToken
         )
     }
 
@@ -612,8 +621,52 @@ fun QuickSettingsSheet(
     folders: List<Folder>,
     onDismiss: () -> Unit,
     onUpdate: (Profile) -> Unit,
-    onOpenEditor: () -> Unit
+    onOpenEditor: () -> Unit,
+    /** v4: session token for the REAL proxy check (null = local mode). */
+    apiToken: String? = null
 ) {
+    val api = remember { ServerApi() }
+    val scope = rememberCoroutineScope()
+    var checkingProxy by remember { mutableStateOf(false) }
+    var checkText by remember { mutableStateOf<String?>(null) }
+    var checkFailed by remember { mutableStateOf(false) }
+
+    fun runProxyCheck() {
+        if (apiToken == null) {
+            checkFailed = true
+            checkText = "Log in to run a real proxy check — checks run on the DevxyzLogin server"
+            return
+        }
+        val p = profile.proxy
+        checkingProxy = true
+        checkText = null
+        scope.launch {
+            when (val r = api.checkProxy(apiToken, p.type, p.host, p.port, p.username, p.password)) {
+                is ApiResult.Success -> {
+                    checkingProxy = false
+                    checkFailed = false
+                    val info = r.data
+                    checkText = "✓ ${info.ip} — ${info.place.ifBlank { "Unknown location" }} • " +
+                        "${info.timezone} • ${info.latencyMs} ms"
+                    var next = profile.copy(lastProxyCheck = info)
+                    if (next.fingerprint.timezone.auto && info.timezone.isNotBlank()) {
+                        next = next.copy(
+                            fingerprint = next.fingerprint.copy(
+                                timezone = next.fingerprint.timezone.copy(zone = info.timezone)
+                            )
+                        )
+                    }
+                    onUpdate(next)
+                }
+                is ApiResult.Failure -> {
+                    checkingProxy = false
+                    checkFailed = true
+                    checkText = "✗ ${r.message}"
+                }
+            }
+        }
+    }
+
     var name by remember { mutableStateOf(profile.name) }
     var note by remember { mutableStateOf(profile.notes) }
     var folderIds by remember { mutableStateOf(profile.folderIds.toSet()) }
@@ -706,13 +759,29 @@ fun QuickSettingsSheet(
             }
             EssentialRow("Timezone") {
                 val tz = profile.fingerprint.timezone
-                Text(if (tz.auto) "Based on IP" else tz.zone)
+                val chk = profile.lastProxyCheck
+                Text(
+                    when {
+                        // v4: after a real check, "Based on IP" resolves to
+                        // the measured zone/place instead of staying vague.
+                        tz.auto && chk != null && chk.timezone.isNotBlank() ->
+                            "Based on IP • ${chk.timezone}" +
+                                if (chk.place.isNotBlank()) " (${chk.place})" else ""
+                        tz.auto -> "Based on IP"
+                        else -> tz.zone
+                    }
+                )
             }
             EssentialRow("Geolocation") {
                 val geo = profile.fingerprint.geolocation
+                val chk = profile.lastProxyCheck
                 Text(
-                    if (geo.auto) "Based on IP"
-                    else geo.mode.replaceFirstChar { it.uppercase() } + " • ${geo.lat}, ${geo.lon}"
+                    when {
+                        geo.auto && chk != null && chk.place.isNotBlank() ->
+                            "Based on IP • ${chk.place}"
+                        geo.auto -> "Based on IP"
+                        else -> geo.mode.replaceFirstChar { it.uppercase() } + " • ${geo.lat}, ${geo.lon}"
+                    }
                 )
             }
             EssentialRow("Resolution") {
@@ -752,12 +821,55 @@ fun QuickSettingsSheet(
             SectionHeader("Proxy & Location", proxyLocOpen) { proxyLocOpen = !proxyLocOpen }
             if (proxyLocOpen) {
                 val fp = profile.fingerprint
+                val chk = profile.lastProxyCheck
                 EssentialRow("Proxy") { Text(profile.proxy.listLabel) }
+                if (profile.proxy.mode == "custom" && profile.proxy.isSet) {
+                    EssentialRow("Check proxy") {
+                        Column {
+                            TextButton(
+                                enabled = !checkingProxy,
+                                onClick = { runProxyCheck() }
+                            ) {
+                                Text(
+                                    if (checkingProxy) "Checking…" else "Check proxy",
+                                    color = BrandTeal
+                                )
+                            }
+                            if (checkText != null) {
+                                Text(
+                                    checkText!!,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (checkFailed) MaterialTheme.colorScheme.error else BrandTeal
+                                )
+                            }
+                            if (apiToken == null) {
+                                Text(
+                                    "Checks run on the server — log in to check for real.",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                }
                 EssentialRow("Timezone") {
-                    Text(if (fp.timezone.auto) "Based on IP" else fp.timezone.zone)
+                    Text(
+                        when {
+                            fp.timezone.auto && chk != null && chk.timezone.isNotBlank() ->
+                                "Based on IP • ${chk.timezone}"
+                            fp.timezone.auto -> "Based on IP"
+                            else -> fp.timezone.zone
+                        }
+                    )
                 }
                 EssentialRow("Geolocation") {
-                    Text(if (fp.geolocation.auto) "Based on IP" else "${fp.geolocation.lat}, ${fp.geolocation.lon}")
+                    Text(
+                        when {
+                            fp.geolocation.auto && chk != null && chk.place.isNotBlank() ->
+                                "Based on IP • ${chk.place}"
+                            fp.geolocation.auto -> "Based on IP"
+                            else -> "${fp.geolocation.lat}, ${fp.geolocation.lon}"
+                        }
+                    )
                 }
                 EssentialRow("WebRTC") {
                     Text(if (fp.webrtcMode == "basedOnIp") "Based on IP" else "Off")

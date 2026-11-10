@@ -662,6 +662,7 @@ function openWorkspaceMenu(anchor){
   const used=S.profiles.length;
   const m=openMenu(anchor,
     '<div style="display:flex;gap:10px;align-items:center;padding:8px 10px"><span class="avatar-sq">'+esc((S.workspace||"M")[0].toUpperCase())+'</span><div><b>'+esc(S.workspace)+'</b><div class="sub-text">Forever Free · '+used+' of 3 profiles</div></div><a style="margin-left:auto" id="wsUpgrade">Upgrade plan</a></div>'
+    +'<div class="sub-text" style="padding:2px 10px 8px">'+(window.DL?DL.accountLabel():"Local mode")+'</div>'
     +'<div class="sep"></div>'
     +'<button id="wsSettings">⚙ Settings &amp; Members</button><button id="wsAll">▦ All workspaces</button>'
     +'<div class="sep"></div>'
@@ -670,9 +671,9 @@ function openWorkspaceMenu(anchor){
   m.querySelector("#wsUpgrade").onclick=()=>{closeMenus();showPage("pa");switchPa("billing")};
   m.querySelector("#wsSettings").onclick=()=>{closeMenus();showPage("pa");switchPa("members")};
   m.querySelector("#wsAll").onclick=()=>{closeMenus();toast(S.workspaces.length+" workspace(s)")};
-  m.querySelectorAll("[data-ws]").forEach(b=>b.onclick=()=>{const w=S.workspaces.find(x=>x.id===b.dataset.ws);if(w){S.workspace=w.name;save();renderSidebar();renderTopbar()}closeMenus()});
-  m.querySelector("#wsAdd").onclick=async()=>{closeMenus();const n=await promptDialog("Add workspace","Workspace name","","Create");if(n&&n.trim()){S.workspaces.push({id:uid(),name:n.trim()});S.workspace=n.trim();save();renderSidebar();renderTopbar();toast("Workspace created")}};
-  m.querySelector("#wsLogout").onclick=()=>{closeMenus();S.session=null;save();gate()};
+  m.querySelectorAll("[data-ws]").forEach(b=>b.onclick=()=>{const w=S.workspaces.find(x=>x.id===b.dataset.ws);if(w){if(window.DL&&DL.isSynced())DL.switchWorkspace(w);else{S.workspace=w.name;save();renderSidebar();renderTopbar()}}closeMenus()});
+  m.querySelector("#wsAdd").onclick=async()=>{closeMenus();const n=await promptDialog("Add workspace","Workspace name","","Create");if(n&&n.trim()){if(window.DL&&DL.isSynced())DL.createWorkspace(n.trim());else{S.workspaces.push({id:uid(),name:n.trim()});S.workspace=n.trim();save();renderSidebar();renderTopbar();toast("Workspace created")}}};
+  m.querySelector("#wsLogout").onclick=()=>{closeMenus();if(window.DL)DL.signOut();else{S.session=null;save();gate()}};
 }
 const PAGE_TITLES={profiles:"All profiles",accounts:"Accounts",proxies:"Proxies",ai:"AI Assistant",pa:"API",cloud:"Cloud Android",console:"Dashboard"};
 function renderTopbar(){
@@ -680,7 +681,9 @@ function renderTopbar(){
    +'<div style="margin-left:auto;display:flex;gap:9px;align-items:center">'
    +'<button class="top-pill" id="installBtn">⇩ Install App</button>'
    +'<button class="top-pill" id="inviteBtn">🎁 Invite and get 150$</button>'
+   +'<span id="syncChip" title="Sync status" style="font-size:12px;padding:5px 11px;border:1px solid var(--line);border-radius:999px;color:var(--muted);white-space:nowrap"></span>'
    +'<button class="avatar-btn" id="avatarBtn"><span class="avatar-rd">'+esc((S.email||"D")[0].toUpperCase())+'</span>'+esc(S.workspace)+'</button></div>';
+  if(window.DL)DL.chip();
   $("#installBtn").onclick=()=>toast("DevxyzLogin desktop app — coming with the desktop release. The web dashboard works in any browser.");
   $("#inviteBtn").onclick=()=>{showPage("pa");switchPa("affiliate")};
   $("#avatarBtn").onclick=e=>{e.stopPropagation();openWorkspaceMenu(e.currentTarget)};
@@ -704,7 +707,7 @@ function showPage(page){
 
 /* ================= sign-in (capture §2) ================= */
 function gate(){
-  if(S.session){$("#loginView").classList.add("hidden");$("#app").classList.remove("hidden");applyTheme();renderSidebar();renderTopbar();showPage(currentPage)}
+  if(S.session){$("#loginView").classList.add("hidden");$("#app").classList.remove("hidden");applyTheme();renderSidebar();renderTopbar();showPage(currentPage);if(window.DL)DL.bootSync()}
   else{$("#app").classList.add("hidden");renderLogin()}
 }
 function renderLogin(){
@@ -716,9 +719,11 @@ function renderLogin(){
    +'<button class="btn" id="googleBtn" style="width:100%;border-color:var(--accent2);color:var(--accent2);font-weight:600"><b style="font-size:16px">G</b> Continue with Google</button>'
    +'<div class="or-div">OR</div>'
    +'<div class="field"><label class="label">Your email</label><div class="pw-wrap"><input class="input" id="loginEmail" placeholder="Your email" value="'+esc(S.email||"")+'"><span class="ok-check hidden" id="emailOk">✓</span></div></div>'
+   +'<div class="field hidden" id="nameField"><label class="label">Your name</label><input class="input" id="loginName" placeholder="Your name"></div>'
    +'<div class="field hidden" id="pwField"><label class="label">Password</label><div class="pw-wrap"><input class="input" id="loginPw" type="password" placeholder="Password"><button class="eye-btn" id="pwEye" type="button">👁</button></div><div class="login-err hidden" id="loginErr">⚠ Wrong email or password</div></div>'
    +'<button class="btn btn-green" id="loginBtn" style="width:100%" disabled>Log in</button>'
    +'<div style="display:flex;justify-content:space-between;margin-top:16px"><a id="modeLink" style="color:var(--ink)">Create an account</a><a id="forgotLink" style="color:var(--ink)">Forgot password?</a></div>'
+   +'<div style="margin-top:14px;text-align:center"><a id="localModeLink" style="color:var(--muted);font-size:13px">Continue in local mode →</a></div>'
    +'<div class="sub-text" style="margin-top:34px"><a style="color:var(--muted)">Terms of use</a> &nbsp; <a style="color:var(--muted)">Privacy policy</a></div>'
    +'</div></div>'
    +'<div class="login-right"><div class="favi-row"><span>🌐</span><span>📘</span><span>▶️</span><span>📷</span><span>🐦</span><span>💼</span></div>'
@@ -729,15 +734,15 @@ function renderLogin(){
   emailInp.oninput=()=>{const ok=/.+@.+\..+/.test(emailInp.value);lv.querySelector("#emailOk").classList.toggle("hidden",!ok);btn.disabled=!(ok&&(step===1||pwInp.value.length>=1))};
   pwInp.oninput=()=>{btn.disabled=!(pwInp.value.length>=1)};
   lv.querySelector("#pwEye").onclick=()=>{pwInp.type=pwInp.type==="password"?"text":"password"};
-  lv.querySelector("#googleBtn").onclick=()=>{S.session={email:S.email||"devxyz@local"};save();gate();toast("Signed in with Google (local demo)")};
-  lv.querySelector("#modeLink").onclick=()=>{mode=mode==="login"?"register":"login";lv.querySelector("#loginSub").textContent=mode==="register"?"Create your DevxyzLogin account.":"Welcome back! Please log in to your account.";btn.textContent=mode==="register"?"Create account":"Log in"};
-  lv.querySelector("#forgotLink").onclick=()=>toast("Password reset link sent (local demo — any password works on this device)");
+  lv.querySelector("#googleBtn").onclick=()=>{if(window.DL)DL.localOnly();S.session={email:S.email||"devxyz@local",local:true};save();gate();toast("Signed in with Google (local demo)")};
+  lv.querySelector("#modeLink").onclick=()=>{mode=mode==="login"?"register":"login";lv.querySelector("#loginSub").textContent=mode==="register"?"Create your DevxyzLogin account.":"Welcome back! Please log in to your account.";btn.textContent=mode==="register"?"Create account":"Log in";lv.querySelector("#modeLink").textContent=mode==="register"?"Log in instead":"Create an account";lv.querySelector("#nameField").classList.toggle("hidden",mode!=="register");lv.querySelector("#loginErr").classList.add("hidden")};
+  lv.querySelector("#forgotLink").onclick=()=>toast("Password reset is not available yet — server accounts use the password set at sign-up",1);
+  lv.querySelector("#localModeLink").onclick=()=>{const em=emailInp.value.trim();DL.enterLocal(em||S.email||"devxyz@local")};
   btn.onclick=()=>{
     if(step===1){step=2;lv.querySelector("#pwField").classList.remove("hidden");btn.disabled=pwInp.value.length<1;pwInp.focus();return}
     const em=emailInp.value.trim(), pw=pwInp.value;
-    if(mode==="register"){S.auth={email:em,password:pw};S.email=em;S.session={email:em};save();gate();toast("Account created — welcome to DevxyzLogin!");return}
-    if(S.auth&&S.auth.email===em&&S.auth.password!==pw){lv.querySelector("#loginErr").classList.remove("hidden");return}
-    S.email=em;S.session={email:em};save();gate();toast("Welcome back!");
+    const nameEl=lv.querySelector("#loginName");
+    DL.doAuth(mode,em,pw,nameEl?nameEl.value.trim():"",lv.querySelector("#loginErr"),btn);
   };
 }
 </script>
@@ -848,20 +853,20 @@ function refreshRows(c,cloud){
   tb.querySelectorAll("[data-quick]").forEach(b=>b.onclick=()=>openQuickDrawer(b.dataset.quick));
   tb.querySelectorAll("[data-note]").forEach(b=>b.onclick=()=>startInlineEdit(b,"notes"));
   tb.querySelectorAll("[data-inline-name]").forEach(b=>b.onclick=()=>startInlineEdit(b,"name"));
-  tb.querySelectorAll("[data-loc]").forEach(inp=>{inp.onclick=e=>e.stopPropagation();inp.onchange=()=>{const p=findProfile(inp.dataset.loc);const m=COUNTRIES.find(x=>x[1].toLowerCase()===inp.value.trim().toLowerCase()||x[0].toLowerCase()===inp.value.trim().toLowerCase());if(m){p.fp.country=m[0];p.fp.countryName=m[1];p.fp.flag=m[2];if(p.proxy.mode==="builtin")p.proxy.buyCountry=m[0];hist(p,"Proxy location → "+m[1]);save();refreshRows(c,cloud);toast("Location updated")}else toast("Country not found",1)}});
+  tb.querySelectorAll("[data-loc]").forEach(inp=>{inp.onclick=e=>e.stopPropagation();inp.onchange=()=>{const p=findProfile(inp.dataset.loc);const m=COUNTRIES.find(x=>x[1].toLowerCase()===inp.value.trim().toLowerCase()||x[0].toLowerCase()===inp.value.trim().toLowerCase());if(m){p.fp.country=m[0];p.fp.countryName=m[1];p.fp.flag=m[2];if(p.proxy.mode==="builtin")p.proxy.buyCountry=m[0];hist(p,"Proxy location → "+m[1]);save();if(window.DL)DL.profileUpdated(p);refreshRows(c,cloud);toast("Location updated")}else toast("Country not found",1)}});
 }
 function startInlineEdit(el,field){
   const p=findProfile(el.dataset.inlineName||el.dataset.note); if(!p)return;
   const cur=field==="name"?p.name:(p.notes||"");
   const inp=document.createElement("input"); inp.className="inline-input"; inp.value=cur; inp.style.minWidth="160px";
   el.replaceWith(inp); inp.focus(); inp.select();
-  const commit=()=>{const v=inp.value.trim(); if(field==="name"&&v){p.name=v;hist(p,"Renamed to “"+v+"”")} if(field==="notes"){p.notes=v;hist(p,"Notes updated")} p.lastUpdate=nowStr(); save(); showPage(currentPage)};
+  const commit=()=>{const v=inp.value.trim(); if(field==="name"&&v){p.name=v;hist(p,"Renamed to “"+v+"”")} if(field==="notes"){p.notes=v;hist(p,"Notes updated")} p.lastUpdate=nowStr(); save(); if(window.DL)DL.profileUpdated(p); showPage(currentPage)};
   inp.onblur=commit; inp.onkeydown=e=>{if(e.key==="Enter")inp.blur();if(e.key==="Escape"){inp.value=cur;inp.blur()}};
 }
 function openFoldersMenu(anchor){
   const items=S.folders.map(f=>'<button data-f="'+f.id+'"><span class="mi">📁</span><span style="flex:1">'+esc(f.name)+'</span>'+(activeFolder===f.id?'<span style="color:var(--accent2)">✓</span>':"")+'</button>').join("");
   const m=openMenu(anchor,'<div style="padding:4px 6px"><span class="search-pop" style="width:100%">🔍<input id="folderSearch" placeholder="Search folders..." style="width:100%"></span></div><button data-add="1" style="color:var(--accent2);font-weight:600">+ Add folder</button><button data-f=""><span class="mi">📁</span><span style="flex:1">All folders</span>'+(activeFolder===""?'<span style="color:var(--accent2)">✓</span>':"")+'</button>'+items,260);
-  m.querySelector("[data-add]").onclick=async()=>{closeMenus();const n=await promptDialog("Add folder","Folder name","","Create folder");if(n&&n.trim()){S.folders.push({id:uid(),name:n.trim()});save();showPage(currentPage);toast("Folder added")}};
+  m.querySelector("[data-add]").onclick=async()=>{closeMenus();const n=await promptDialog("Add folder","Folder name","","Create folder");if(n&&n.trim()){const f={id:uid(),name:n.trim()};S.folders.push(f);save();if(window.DL)DL.folderCreated(f);showPage(currentPage);toast("Folder added")}};
   m.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{activeFolder=b.dataset.f;closeMenus();showPage(currentPage)});
   const fs=m.querySelector("#folderSearch"); fs.onclick=e=>e.stopPropagation();
   fs.oninput=()=>{const v=fs.value.toLowerCase();m.querySelectorAll("[data-f]").forEach(b=>{if(b.dataset.f)b.style.display=b.textContent.toLowerCase().includes(v)?"":"none"})};
@@ -908,17 +913,17 @@ function openRowMenu(pid,anchor){
   m.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>{closeMenus();act[b.dataset.a]()});
 }
 function cloneProfile(p){
-  const cp=clone(p); cp.id=uid(); cp.name=p.name+" copy"; cp.state="ready"; cp.createdAt=nowStr(); cp.lastUpdate=nowStr(); cp.lastLaunch="";
-  cp.history=[{t:nowStr(),a:"Cloned from "+p.name}]; S.profiles.unshift(cp); save(); return cp;
+  const cp=clone(p); cp.id=uid(); delete cp.serverId; cp.name=p.name+" copy"; cp.state="ready"; cp.createdAt=nowStr(); cp.lastUpdate=nowStr(); cp.lastLaunch="";
+  cp.history=[{t:nowStr(),a:"Cloned from "+p.name}]; S.profiles.unshift(cp); save(); if(window.DL)DL.profileCloned(p,cp); return cp;
 }
 function softDelete(p){
   p.deletedAt=nowStr(); p.deletedBy=S.email; p.state="ready"; delete runMap[p.id];
-  S.profiles=S.profiles.filter(x=>x.id!==p.id); S.deleted.unshift(p); selected.delete(p.id); save();
+  S.profiles=S.profiles.filter(x=>x.id!==p.id); S.deleted.unshift(p); selected.delete(p.id); save(); if(window.DL)DL.profileDeleted(p);
 }
 function foldersDialog(p){
   const body=S.folders.length?S.folders.map(f=>{const on=(p.folderIds||[]).includes(f.id)||p.folderId===f.id;return '<div class="kv-row"><span class="checkbox'+(on?" on":"")+'" data-fid="'+f.id+'">'+(on?"✓":"")+'</span><span style="flex:1">'+esc(f.name)+'</span></div>'}).join(""):'<p class="sub-text">No folders yet. Create one from the folders menu.</p>';
   const ov=openModal("Folders — "+p.name,body,'<button class="btn btn-primary" data-close="1">Done</button>');
-  ov.querySelectorAll("[data-fid]").forEach(b=>b.onclick=()=>{const id=b.dataset.fid;let ids=p.folderIds||[];ids=ids.includes(id)?ids.filter(x=>x!==id):[...ids,id];p.folderIds=ids;p.folderId=ids[0]||"";save();b.classList.toggle("on",ids.includes(id));b.textContent=ids.includes(id)?"✓":""});
+  ov.querySelectorAll("[data-fid]").forEach(b=>b.onclick=()=>{const id=b.dataset.fid;let ids=p.folderIds||[];ids=ids.includes(id)?ids.filter(x=>x!==id):[...ids,id];p.folderIds=ids;p.folderId=ids[0]||"";save();if(window.DL)DL.profileUpdated(p);b.classList.toggle("on",ids.includes(id));b.textContent=ids.includes(id)?"✓":""});
 }
 function cookiesDialog(p){
   const render=()=>{
@@ -928,12 +933,12 @@ function cookiesDialog(p){
       +'<div class="field"><label class="label">Import cookies</label><textarea class="input" id="ckImport" rows="3" placeholder="JSON array or name=value; name2=value2"></textarea><button class="btn" id="ckImpBtn" style="margin-top:8px">Import Cookies</button></div>'
       + rows,
       '<button class="btn" id="ckExport">Export</button><button class="btn btn-danger-o" id="ckClear">Delete all</button><button class="btn btn-primary" data-close="1">Done</button>',true);
-    ov.querySelector("#ckAdd").onclick=()=>{const n=ov.querySelector("#ckName").value.trim(),v=ov.querySelector("#ckVal").value;if(!n)return toast("Cookie name required",1);p.cookies.push({name:n,value:v});hist(p,"Cookie added: "+n);save();closeModal();render()};
+    ov.querySelector("#ckAdd").onclick=()=>{const n=ov.querySelector("#ckName").value.trim(),v=ov.querySelector("#ckVal").value;if(!n)return toast("Cookie name required",1);p.cookies.push({name:n,value:v});hist(p,"Cookie added: "+n);save();if(window.DL)DL.profileUpdated(p);closeModal();render()};
     ov.querySelector("#ckImpBtn").onclick=()=>{const t=ov.querySelector("#ckImport").value.trim();if(!t)return;let n=0;try{const arr=JSON.parse(t);if(Array.isArray(arr))arr.forEach(ck=>{if(ck.name){p.cookies.push({name:ck.name,value:String(ck.value||"")});n++}})}catch(e){t.split(/[;\n]/).map(s=>s.trim()).filter(Boolean).forEach(pair=>{const i=pair.indexOf("=");if(i>0){p.cookies.push({name:pair.slice(0,i).trim(),value:pair.slice(i+1).trim()});n++}})}
-      hist(p,"Imported "+n+" cookies");save();closeModal();render();toast(n+" cookies imported")};
+      hist(p,"Imported "+n+" cookies");save();if(window.DL)DL.profileUpdated(p);closeModal();render();toast(n+" cookies imported")};
     ov.querySelector("#ckExport").onclick=()=>download(p.name+"-cookies.json",JSON.stringify(p.cookies||[],null,2));
-    ov.querySelector("#ckClear").onclick=async()=>{if(await confirmDialog("Delete all cookies","Remove all cookies from “"+p.name+"”?","Delete all")){p.cookies=[];hist(p,"All cookies deleted");save();closeModal();render()}};
-    ov.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{p.cookies.splice(+b.dataset.del,1);save();closeModal();render()});
+    ov.querySelector("#ckClear").onclick=async()=>{if(await confirmDialog("Delete all cookies","Remove all cookies from “"+p.name+"”?","Delete all")){p.cookies=[];hist(p,"All cookies deleted");save();if(window.DL)DL.profileUpdated(p);closeModal();render()}};
+    ov.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{p.cookies.splice(+b.dataset.del,1);save();if(window.DL)DL.profileUpdated(p);closeModal();render()});
   };
   render();
 }
@@ -1051,34 +1056,34 @@ async function bulkAction(a,c,cloud){
   if(a==="stop"){list.forEach(p=>{if(p.state==="running")stopProfile(p.id,c,cloud)});toast("Stop sent to "+list.length+" profile(s)")}
   else if(a==="clone"){list.forEach(p=>cloneProfile(p));toast(list.length+" profile(s) cloned");showPage(currentPage)}
   else if(a==="del"){if(await confirmDialog("Delete profiles","Move "+list.length+" profile(s) to Restore profiles?","Move to trash")){list.forEach(p=>softDelete(p));showPage(currentPage);toast("Profiles moved to trash")}}
-  else if(a==="fp"){list.forEach(p=>{const os=p.fp.os;p.fp=genFingerprint(os);hist(p,"Fingerprint updated (bulk)")});save();showPage(currentPage);toast("Fingerprints updated")}
+  else if(a==="fp"){list.forEach(p=>{const os=p.fp.os;p.fp=genFingerprint(os);hist(p,"Fingerprint updated (bulk)")});save();if(window.DL)DL.profilesUpdated(list);showPage(currentPage);toast("Fingerprints updated")}
   else if(a==="export"){download("devxyzlogin-profiles.json",JSON.stringify(list,null,2));toast("Exported "+list.length+" profile(s)")}
   else if(a==="cookies"){const all={};list.forEach(p=>all[p.name]=p.cookies||[]);download("devxyzlogin-cookies.json",JSON.stringify(all,null,2))}
   else if(a==="folder"){
     const body=S.folders.map(f=>'<div class="kv-row"><span class="checkbox" data-bf="'+f.id+'"></span><span style="flex:1">'+esc(f.name)+'</span></div>').join("")||'<p class="sub-text">No folders yet.</p>';
     const ov=openModal("Add to Folder",body,'<button class="btn btn-primary" data-close="1">Done</button>');
-    ov.querySelectorAll("[data-bf]").forEach(b=>b.onclick=()=>{const fid=b.dataset.bf;list.forEach(p=>{p.folderIds=p.folderIds||[];if(!p.folderIds.includes(fid))p.folderIds.push(fid);p.folderId=p.folderIds[0]});save();b.classList.add("on");b.textContent="✓";toast("Added to folder")});
+    ov.querySelectorAll("[data-bf]").forEach(b=>b.onclick=()=>{const fid=b.dataset.bf;list.forEach(p=>{p.folderIds=p.folderIds||[];if(!p.folderIds.includes(fid))p.folderIds.push(fid);p.folderId=p.folderIds[0]});save();if(window.DL)DL.profilesUpdated(list);b.classList.add("on");b.textContent="✓";toast("Added to folder")});
   }
   else if(a==="proxy"){
     const ov=openModal("Assign proxy",'<div class="field"><label class="label">Saved proxy</label><select class="input" id="bpSel"><option value="">Without proxy</option>'+S.proxies.map(px=>'<option value="'+px.id+'">'+esc(px.name)+" — "+esc(px.host)+":"+esc(px.port)+'</option>').join("")+'</select></div><div class="field"><label class="label">…or built-in by country</label><select class="input" id="bpCountry"><option value="">—</option>'+COUNTRIES.map(x=>'<option value="'+x[0]+'">'+x[2]+" "+x[1]+" (Residential)"+'</option>').join("")+'</select></div>','<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" id="bpApply">Apply to '+list.length+'</button>');
-    ov.querySelector("#bpApply").onclick=()=>{const sid=ov.querySelector("#bpSel").value,cc=ov.querySelector("#bpCountry").value;list.forEach(p=>{if(cc){p.proxy={...p.proxy,mode:"builtin",buyCountry:cc,proxyId:""}}else if(sid){p.proxy={...p.proxy,mode:"custom",proxyId:sid}}else{p.proxy={...p.proxy,mode:"none",proxyId:""}}hist(p,"Proxy updated (bulk)")});save();closeModal();showPage(currentPage);toast("Proxy assigned")};
+    ov.querySelector("#bpApply").onclick=()=>{const sid=ov.querySelector("#bpSel").value,cc=ov.querySelector("#bpCountry").value;list.forEach(p=>{if(cc){p.proxy={...p.proxy,mode:"builtin",buyCountry:cc,proxyId:""}}else if(sid){p.proxy={...p.proxy,mode:"custom",proxyId:sid}}else{p.proxy={...p.proxy,mode:"none",proxyId:""}}hist(p,"Proxy updated (bulk)")});save();if(window.DL)DL.profilesUpdated(list);closeModal();showPage(currentPage);toast("Proxy assigned")};
   }
   else if(a==="share"){openModal("Share Profile",'<p class="sub-text" style="font-size:13.5px">Anyone with this link can view the selected profile(s) in read-only mode (local demo link).</p><div class="code-block">https://devxyzlogin.local/share/'+list[0].id+'</div>','<button class="btn" data-close="1">Close</button><button class="btn btn-primary" id="shCopy">Copy link</button>').querySelector("#shCopy").onclick=()=>copyText("https://devxyzlogin.local/share/"+list[0].id,"Share link copied")}
   else if(a==="tags"){
     const ov=openModal("Edit tags",'<div class="field"><label class="label">Add a tag to all selected</label><div style="display:flex;gap:8px"><input class="input" id="btName" placeholder="tag name"><button class="btn btn-primary" id="btAdd">Add</button></div></div>'+allTagsHtml(list),'<button class="btn btn-primary" data-close="1">Done</button>');
-    ov.querySelector("#btAdd").onclick=()=>{const t=ov.querySelector("#btName").value.trim();if(!t)return;list.forEach(p=>{if(!p.tags.some(x=>x.text===t))p.tags.push({text:t,color:pick(TAG_COLORS)})});save();closeModal();showPage(currentPage);toast("Tag added")};
+    ov.querySelector("#btAdd").onclick=()=>{const t=ov.querySelector("#btName").value.trim();if(!t)return;list.forEach(p=>{if(!p.tags.some(x=>x.text===t))p.tags.push({text:t,color:pick(TAG_COLORS)})});save();if(window.DL)DL.profilesUpdated(list);closeModal();showPage(currentPage);toast("Tag added")};
   }
   else if(a==="ext"){extModal(list)}
   else if(a==="bm"){
     const ov=openModal("Edit bookmarks",'<div class="field"><label class="label">Bookmarks (folder::name::url per line) — applied to all selected</label><textarea class="input" id="bbText" rows="10">'+esc(list[0].bookmarks||"")+'</textarea></div>','<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" id="bbSave">Apply</button>',true);
-    ov.querySelector("#bbSave").onclick=()=>{list.forEach(p=>{p.bookmarks=ov.querySelector("#bbText").value;hist(p,"Bookmarks updated (bulk)")});save();closeModal();toast("Bookmarks updated")};
+    ov.querySelector("#bbSave").onclick=()=>{list.forEach(p=>{p.bookmarks=ov.querySelector("#bbText").value;hist(p,"Bookmarks updated (bulk)")});save();if(window.DL)DL.profilesUpdated(list);closeModal();toast("Bookmarks updated")};
   }
-  else if(a==="rename"){if(list.length!==1)return toast("Select exactly 1 profile to rename",1);const n=await promptDialog("Rename profile","Profile name",list[0].name,"Rename");if(n&&n.trim()){list[0].name=n.trim();save();showPage(currentPage)}}
+  else if(a==="rename"){if(list.length!==1)return toast("Select exactly 1 profile to rename",1);const n=await promptDialog("Rename profile","Profile name",list[0].name,"Rename");if(n&&n.trim()){list[0].name=n.trim();save();if(window.DL)DL.profileUpdated(list[0]);showPage(currentPage)}}
   else if(a==="transfer"){const em=await promptDialog("Transfer","Transfer "+list.length+" profile(s) to (email)","","Transfer");if(em)toast("Transfer request sent to "+em+" (local demo)")}
   else if(a==="auto"){
     const ov=openModal("Automation — Cookie Bot",'<p class="sub-text" style="font-size:13.5px">Cookie Bot warms up profiles by visiting popular sites and collecting cookies, so profiles look naturally used.</p><div class="log-panel" id="botLog" style="height:130px;margin-top:10px"></div>','<button class="btn" data-close="1">Close</button><button class="btn btn-primary" id="botStart">Start warm-up</button>');
     const lg=ov.querySelector("#botLog");
-    ov.querySelector("#botStart").onclick=()=>{let i=0;const sites=["google.com","youtube.com","facebook.com","amazon.com","wikipedia.org"];lg.innerHTML="";const tick=()=>{if(i>=list.length*2){lg.innerHTML+="<div>✓ Warm-up complete — cookies collected.</div>";list.forEach(p=>{p.cookies.push({name:"warmup_"+Date.now().toString(36),value:"1"});hist(p,"Cookie Bot warm-up")});save();return}const p=list[i%list.length];lg.innerHTML+="<div>["+p.name+"] visiting "+sites[i%sites.length]+"…</div>";lg.scrollTop=lg.scrollHeight;i++;setTimeout(tick,420)};tick()};
+    ov.querySelector("#botStart").onclick=()=>{let i=0;const sites=["google.com","youtube.com","facebook.com","amazon.com","wikipedia.org"];lg.innerHTML="";const tick=()=>{if(i>=list.length*2){lg.innerHTML+="<div>✓ Warm-up complete — cookies collected.</div>";list.forEach(p=>{p.cookies.push({name:"warmup_"+Date.now().toString(36),value:"1"});hist(p,"Cookie Bot warm-up")});save();if(window.DL)DL.profilesUpdated(list);return}const p=list[i%list.length];lg.innerHTML+="<div>["+p.name+"] visiting "+sites[i%sites.length]+"…</div>";lg.scrollTop=lg.scrollHeight;i++;setTimeout(tick,420)};tick()};
   }
 }
 function allTagsHtml(list){
@@ -1090,7 +1095,7 @@ function extModal(list){
   const body=EXT_CATALOG.map(x=>{const on=list.every(p=>(p.extensions||[]).includes(x));return '<div class="kv-row"><span class="checkbox'+(on?" on":"")+'" data-ext="'+esc(x)+'">'+(on?"✓":"")+'</span><span style="flex:1">'+esc(x)+'</span></div>'}).join("")
    +'<div class="field" style="margin-top:12px"><label class="label">Upload custom extension (unpacked)</label><input type="file" id="extFile" webkitdirectory directory multiple><p class="sub-text">Extensions flagged here apply to all new profiles too.</p></div>';
   const ov=openModal("Extensions",body,'<button class="btn btn-primary" data-close="1">Done</button>');
-  ov.querySelectorAll("[data-ext]").forEach(b=>b.onclick=()=>{const x=b.dataset.ext;const on=list.every(p=>(p.extensions||[]).includes(x));list.forEach(p=>{p.extensions=on?p.extensions.filter(e=>e!==x):[...new Set([...(p.extensions||[]),x])]});save();showPage(currentPage);closeModal();extModal(list)});
+  ov.querySelectorAll("[data-ext]").forEach(b=>b.onclick=()=>{const x=b.dataset.ext;const on=list.every(p=>(p.extensions||[]).includes(x));list.forEach(p=>{p.extensions=on?p.extensions.filter(e=>e!==x):[...new Set([...(p.extensions||[]),x])]});save();if(window.DL)DL.profilesUpdated(list);showPage(currentPage);closeModal();extModal(list)});
   ov.querySelector("#extFile").onchange=e=>{if(e.target.files.length){toast("Custom extension noted: "+e.target.files[0].name+" (stored as profile extension)")}};
 }
 </script>
@@ -1152,7 +1157,7 @@ function renderDrawer(){
   /* wiring */
   $("#drClose").onclick=()=>$("#drawerWrap").classList.remove("show");
   $("#drMenu").onclick=e=>{e.stopPropagation();openRowMenu(p.id,e.currentTarget)};
-  const upd=(fn,msg)=>{fn();p.lastUpdate=nowStr();save();if(msg)toast(msg)};
+  const upd=(fn,msg)=>{fn();p.lastUpdate=nowStr();save();if(window.DL)DL.profileUpdated(p);if(msg)toast(msg)};
   $("#drName").onchange=e=>upd(()=>{p.name=e.target.value.trim()||p.name;hist(p,"Renamed via quick settings")});
   const dna=$("#drNoteAdd"); if(dna)dna.onclick=()=>{p.notes=" ";renderDrawer();const i=$("#drNote");if(i){i.value="";i.focus()}};
   const dn=$("#drNote"); if(dn)dn.onchange=e=>upd(()=>{p.notes=e.target.value});
@@ -1260,9 +1265,10 @@ function saveEditor(){
   const ctx=editorCtx, d=ctx.draft;
   if(!d.name.trim())return toast("Profile name is required",1);
   d.lastUpdate=nowStr();
+  let snap=null;
   if(ctx.isNew){d.createdAt=nowStr(); profileSeq++; hist(d,"Profile created"); S.profiles.unshift(d); toast("Profile created")}
-  else{const orig=findProfile(d.id); if(orig){d.history=orig.history||[]; hist(d,"Profile edited"); const i=S.profiles.indexOf(orig); S.profiles[i]=d} toast("Profile saved")}
-  save(); const target=ctx.cloud?"cloud":"profiles"; closeEditor(); showPage(target);
+  else{const orig=findProfile(d.id); if(orig){snap=clone(orig); d.history=orig.history||[]; hist(d,"Profile edited"); const i=S.profiles.indexOf(orig); S.profiles[i]=d} toast("Profile saved")}
+  save(); if(window.DL)DL.profileSaved(d,ctx.isNew,snap); const target=ctx.cloud?"cloud":"profiles"; closeEditor(); showPage(target);
 }
 function segRow(options,current,cb,cls){
   const wrap=document.createElement("div"); wrap.className="seg "+(cls||"");
@@ -1403,16 +1409,32 @@ async function checkProxyFlow(px){
     if(!host||!/^\d{1,5}$/.test(port)||+port<1||+port>65535)return toast("Proxy check failed: enter a valid host and port (1–65535)",1);
     if(!/^[a-zA-Z0-9.\-]+$/.test(host))return toast("Proxy check failed: host format looks invalid",1);
   }
-  toast("Checking proxy…");
-  if(S.serverUrl){
-    try{
-      const r=await fetch(S.serverUrl.replace(/\/$/,"")+"/api/proxies/check",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:type.toLowerCase(),host:host,port:+port,username:px.login||"",password:px.password||""})});
-      const j=await r.json();
-      if(j&&j.ok)return openModal("Check Proxy",'<p style="font-size:14px">✓ Proxy is working</p><div class="sum-row"><span class="sl">Exit IP</span><span class="sv">'+esc(j.ip||"")+'</span></div><div class="sum-row"><span class="sl">Country</span><span class="sv">'+esc(j.country||"")+'</span></div><div class="sum-row"><span class="sl">Timezone</span><span class="sv">'+esc(j.timezone||"")+'</span></div><div class="sum-row"><span class="sl">Latency</span><span class="sv">'+esc(j.latencyMs||"")+' ms</span></div>','<button class="btn btn-primary" data-close="1">OK</button>');
-      return toast("Proxy check failed: "+((j&&j.error)||"server error"),1);
-    }catch(e){return toast("Proxy check failed: server unreachable — format OK ("+type+" "+host+":"+port+")",1)}
+  if(!window.DL||!DL.isSynced()){
+    const ov=openModal("Check Proxy",'<p style="font-size:14px">🔒 Sign in to run a live proxy check</p><p class="sub-text" style="margin-top:8px">Live checks run through your DevxyzLogin server account and report the proxy\'s real exit IP, country, timezone and latency. In local mode nothing leaves this device, so only the format can be verified here.</p>','<button class="btn" data-close="1">Close</button><button class="btn btn-primary" id="cpSignIn">Sign in</button>');
+    ov.querySelector("#cpSignIn").onclick=()=>{closeModal();S.session=null;save();gate()};
+    return;
   }
-  setTimeout(()=>toast("✓ Format valid: "+type+" "+(host||"built-in")+":"+(port||"10080")+" — connect the DevxyzLogin server (Settings → API) for a live exit-IP check"),700);
+  toast("Checking proxy…");
+  let target={type:type.toLowerCase(),host:host,port:+port,username:px.login||"",password:px.password||""};
+  if(px.mode==="builtin"){
+    try{
+      const b=await api("/api/proxies/builtin",{method:"POST",body:{country:px.buyCountry||"FR",type:String(px.type||"Residential").toLowerCase()}});
+      const mapped=fromServerSharedProxy(b.proxy);
+      if(!S.proxies.find(x=>x.serverId===mapped.serverId))S.proxies.push(mapped);
+      save();
+      target={type:b.proxy.proxy.type,host:b.proxy.proxy.host,port:b.proxy.proxy.port,username:b.proxy.proxy.username,password:b.proxy.proxy.password};
+    }catch(e){
+      if(e.status===501)return openModal("Check Proxy",'<p style="font-size:14px">Built-in proxies are not available yet</p><p class="sub-text" style="margin-top:8px">No residential provider is configured on the DevxyzLogin server, so there is no built-in proxy to check. Add your own proxy and the checker will verify it for real.</p>','<button class="btn btn-primary" data-close="1">OK</button>');
+      return toast("Proxy check failed: "+(e.network?"server unreachable":e.message),1);
+    }
+  }
+  try{
+    const j=await api("/api/proxies/check",{method:"POST",body:target});
+    return openModal("Check Proxy",'<p style="font-size:14px">✓ Proxy is working</p><div class="sum-row"><span class="sl">Exit IP</span><span class="sv">'+esc(j.ip||"")+'</span></div><div class="sum-row"><span class="sl">Country</span><span class="sv">'+esc(j.country||"")+(j.countryCode?" ("+esc(j.countryCode)+")":"")+'</span></div>'+(j.city?'<div class="sum-row"><span class="sl">City</span><span class="sv">'+esc(j.city)+'</span></div>':"")+'<div class="sum-row"><span class="sl">Timezone</span><span class="sv">'+esc(j.timezone||"")+'</span></div><div class="sum-row"><span class="sl">Latency</span><span class="sv">'+esc(j.latencyMs||"")+' ms</span></div>','<button class="btn btn-primary" data-close="1">OK</button>');
+  }catch(e){
+    if(e.body&&e.body.ok===false)return toast("Proxy check failed: "+(e.body.error||"proxy unreachable"),1);
+    return toast("Proxy check failed: "+(e.network?"server unreachable":e.message),1);
+  }
 }
 function stepper(val,min,max,cb){
   const w=document.createElement("span"); w.className="stepper";
@@ -1532,8 +1554,8 @@ function renderProxies(c){
     else deviceProxyDialog();
   });
   c.querySelectorAll("[data-pxcheck]").forEach(b=>b.onclick=()=>{const px=S.proxies.find(x=>x.id===b.dataset.pxcheck);checkProxyFlow({mode:"custom",type:px.type,host:px.host,port:px.port,login:px.login,password:px.password})});
-  c.querySelectorAll("[data-pxdel]").forEach(b=>b.onclick=async()=>{const px=S.proxies.find(x=>x.id===b.dataset.pxdel);if(await confirmDialog("Archive proxy","Archive “"+px.name+"”? It stays restorable from the Archive tab.","Archive",false)){px.archived=true;save();renderProxies(c)}});
-  c.querySelectorAll("[data-pxnote]").forEach(a=>a.onclick=async()=>{const px=S.proxies.find(x=>x.id===a.dataset.pxnote);const n=await promptDialog("Proxy note","Note",px.notes||"","Save");if(n!==null){px.notes=n;save();renderProxies(c)}});
+  c.querySelectorAll("[data-pxdel]").forEach(b=>b.onclick=async()=>{const px=S.proxies.find(x=>x.id===b.dataset.pxdel);if(await confirmDialog("Archive proxy","Archive “"+px.name+"”? It stays restorable from the Archive tab.","Archive",false)){px.archived=true;save();if(window.DL)DL.proxyUpdated(px);renderProxies(c)}});
+  c.querySelectorAll("[data-pxnote]").forEach(a=>a.onclick=async()=>{const px=S.proxies.find(x=>x.id===a.dataset.pxnote);const n=await promptDialog("Proxy note","Note",px.notes||"","Save");if(n!==null){px.notes=n;save();if(window.DL)DL.proxyUpdated(px);renderProxies(c)}});
 }
 function pxTypeLabel(px){const t=String(px.type||"").toUpperCase();return t==="SOCKS5"||t==="SOCKS4"?"Socks":(px.kind||"Residential")}
 function buyCatalogDialog(type){
@@ -1546,6 +1568,7 @@ function buyCatalogDialog(type){
    +'<div class="sum-row"><span class="sl">Provider</span><span class="sv">not configured</span></div>';
   const ov=openModal("Buy "+cat.type+" proxy",body,'<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" id="bcBuy">Buy</button>');
   ov.querySelector("#bcBuy").onclick=()=>{
+    if(window.DL&&DL.isSynced()){DL.buyBuiltin(cat,ov.querySelector("#bcCountry").value);return}
     closeModal();
     openModal("Residential provider not configured",'<p class="sub-text" style="font-size:13.5px">The built-in proxy pool needs a residential provider plugged into the DevxyzLogin server (providers config on the server). Until then, buying is unavailable — but <b>Your proxy</b> works fully: add any proxy you own on this page or inside a profile, and the checker will verify it for real.</p>','<button class="btn" data-close="1">Close</button><button class="btn btn-primary" id="bcCustom">Add custom proxy</button>')
      .querySelector("#bcCustom").onclick=()=>{closeModal();customProxyDialog()};
@@ -1565,17 +1588,18 @@ function customProxyDialog(edit){
     const v=read(); if(!v.host||!v.port)return toast("Host and port are required",1);
     const cc=countryByCode(ov.querySelector("#cpCountry").value);
     const rec={id:edit?edit.id:uid(),name:ov.querySelector("#cpName").value.trim()||(cc[1]+" proxy"),type:v.type,host:v.host,port:v.port,login:v.login,password:v.password,country:cc[1],flag:cc[2],ip:v.host,state:"Connected",kind:"Custom"};
+    const snap=edit?clone(edit):null;
     if(edit){Object.assign(edit,rec)}else S.proxies.push(rec);
-    save(); closeModal(); showPage("proxies"); toast("Proxy saved");
+    save(); if(window.DL)DL.proxySaved(rec,!!edit,snap); closeModal(); showPage("proxies"); toast("Proxy saved");
   };
 }
 function importProxiesDialog(){
   const ov=openModal("Import Proxies",'<div class="field"><label class="label">One proxy per line: type://user:pass@host:port or host:port</label><textarea class="input" id="ipText" rows="7" placeholder="socks5://user:pass@1.2.3.4:1080\n5.6.7.8:8080"></textarea></div>','<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" id="ipGo">Import</button>');
   ov.querySelector("#ipGo").onclick=()=>{
-    const lines=ov.querySelector("#ipText").value.split("\n").map(s=>s.trim()).filter(Boolean); let n=0;
+    const lines=ov.querySelector("#ipText").value.split("\n").map(s=>s.trim()).filter(Boolean); let n=0; const created=[];
     lines.forEach(l=>{const m=l.match(/^(?:(\w+):\/\/)?(?:([^:@]+):([^@]+)@)?([\w.\-]+):(\d+)$/);if(!m)return;
-      S.proxies.push({id:uid(),name:m[4]+" proxy",type:(m[1]||"http").toUpperCase(),host:m[4],port:m[5],login:m[2]||"",password:m[3]||"",country:"",flag:"🌐",ip:m[4],state:"Connected",kind:"Custom"});n++});
-    save(); closeModal(); showPage("proxies"); toast(n+" proxies imported");
+      const rec={id:uid(),name:m[4]+" proxy",type:(m[1]||"http").toUpperCase(),host:m[4],port:m[5],login:m[2]||"",password:m[3]||"",country:"",flag:"🌐",ip:m[4],state:"Connected",kind:"Custom"};S.proxies.push(rec);created.push(rec);n++});
+    save(); if(window.DL&&created.length)DL.proxiesCreated(created); closeModal(); showPage("proxies"); toast(n+" proxies imported");
   };
 }
 function deviceProxyDialog(){
@@ -1796,30 +1820,46 @@ function paSessions(m){
   m.querySelectorAll("[data-sessout]").forEach(b=>b.onclick=()=>{S.sessions=S.sessions.filter(s=>s.id!==b.dataset.sessout);save();switchPa("sessions")});
 }
 function paApi(m){
-  const rows=S.tokens.map((t,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(t.name)+'</td><td>'+esc(t.token.slice(0,8))+'•••••••• <a data-tokcopy="'+t.id+'">⧉</a></td><td>'+esc(t.created)+'</td><td><button class="btn btn-sm" data-tokdel="'+t.id+'">Delete</button></td></tr>').join("");
+  const base=apiBase();
   m.innerHTML='<h1>API</h1><p style="max-width:680px">You can connect to API and integrate DevxyzLogin with other programs to, for instance, automate some processes by using self-written bots. Keep in mind that you must be able to program on your own to use our API. The full version of the API is only available in the paid version of DevxyzLogin. <a id="apiPay">Pay now</a></p>'
    +'<div style="display:flex;gap:9px;margin:14px 0 20px">'+["Postman","GitHub","MCP","API"].map(b=>'<button class="btn" style="border-radius:999px" data-apilink="'+b+'">'+b+'</button>').join("")+'</div>'
-   + kv("DevxyzLogin server URL",'<span style="display:flex;gap:8px;max-width:460px"><input class="input" id="apiServer" placeholder="https://your-server.example" value="'+esc(S.serverUrl||"")+'"><button class="btn" id="apiServerSave">Save</button></span>')
-   +'<div style="display:flex;align-items:center"><h2 style="font-size:18px;flex:1">Access tokens</h2><button class="btn btn-green" id="tokNew">New Token</button></div>'
-   +'<div class="tbl-wrap" style="margin-top:10px"><table class="tbl" style="min-width:0"><thead><tr><th>#</th><th>Name</th><th>Token</th><th>Created</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="5" class="sub-text" style="text-align:center">No tokens yet</td></tr>')+'</tbody></table></div>'
-   +'<p class="sub-text" style="margin-top:10px">Send your token in the Authorization header: <span class="code-block" style="display:inline-block;padding:3px 8px">Authorization: Bearer YOUR_API_TOKEN</span> — list profiles with GET /browser/v2 (30 per page, ?page=2).</p>';
+   + kv("DevxyzLogin server URL",'<span style="display:flex;gap:8px;max-width:460px"><input class="input" id="apiServer" placeholder="https://your-server.example" value="'+esc(S.serverUrl||"")+'"><button class="btn" id="apiServerSave">Save</button></span><div class="sub-text" style="margin-top:5px">Currently using: '+esc(base)+'</div>')
+   +'<div id="apiTokensZone"></div>'
+   +'<p class="sub-text" style="margin-top:10px">Send your token in the Authorization header: <span class="code-block" style="display:inline-block;padding:3px 8px">Authorization: Bearer YOUR_API_TOKEN</span> — the server API lives at '+esc(base)+'/api (profiles, folders, proxies, tokens).</p>';
   m.querySelector("#apiPay").onclick=()=>switchPa("billing");
-  m.querySelector("#apiServerSave").onclick=()=>{S.serverUrl=m.querySelector("#apiServer").value.trim();save();toast("Server URL saved")};
+  m.querySelector("#apiServerSave").onclick=()=>{S.serverUrl=m.querySelector("#apiServer").value.trim();save();toast("Server URL saved");switchPa("api")};
   m.querySelectorAll("[data-apilink]").forEach(b=>b.onclick=()=>{
-    const k=b.dataset.apilink, tok=(S.tokens[0]||{}).token||"";
-    if(k==="MCP")openModal("MCP server config",'<p class="sub-text" style="margin-bottom:9px">Manage DevxyzLogin profiles, proxies, fingerprints and cloud browser sessions through AI conversations. Add this to your MCP client:</p><div class="code-block">'+esc(JSON.stringify({mcpServers:{devxyzlogin:{url:(S.serverUrl||"https://api.devxyzlogin.local")+"/mcp",headers:{Authorization:"Bearer "+tok}}}},null,2))+'</div>','<button class="btn btn-primary" data-close="1">Done</button>',true);
-    else if(k==="API")openModal("API quickstart",'<div class="code-block">curl '+(S.serverUrl||"https://api.devxyzlogin.local")+'/browser/v2 \\\n  -H "Authorization: Bearer YOUR_API_TOKEN"</div><p class="sub-text" style="margin-top:9px">The response contains a profiles array and allProfilesCount. You get up to 30 profiles per page: add ?page=2 for the next page.</p>','<button class="btn btn-primary" data-close="1">Done</button>',true);
+    const k=b.dataset.apilink;
+    if(k==="MCP")openModal("MCP server config",'<p class="sub-text" style="margin-bottom:9px">Manage DevxyzLogin profiles, proxies, fingerprints and cloud browser sessions through AI conversations. Add this to your MCP client:</p><div class="code-block">'+esc(JSON.stringify({mcpServers:{devxyzlogin:{url:base+"/mcp",headers:{Authorization:"Bearer YOUR_API_TOKEN"}}}},null,2))+'</div>','<button class="btn btn-primary" data-close="1">Done</button>',true);
+    else if(k==="API")openModal("API quickstart",'<div class="code-block">curl '+base+'/api/profiles \\\n  -H "Authorization: Bearer YOUR_API_TOKEN"</div><p class="sub-text" style="margin-top:9px">Returns the profiles of your active workspace as JSON (shared schema). Create profiles with POST /api/profiles, check a proxy with POST /api/proxies/check.</p>','<button class="btn btn-primary" data-close="1">Done</button>',true);
     else toast(k+" collection — link it from your "+k+" workspace (demo)");
   });
-  m.querySelector("#tokNew").onclick=async()=>{
-    const name=await promptDialog("New Token","Token name","My token","Create token"); if(!name)return;
-    const token="dl_"+Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,16);
-    S.tokens.push({id:uid(),name:name.trim()||"Token",token:token,created:nowStr()}); S.apiToken=token; save();
-    openModal("Token created",'<p class="sub-text" style="margin-bottom:9px">Copy it now — the full token is shown once in this dialog.</p><div class="code-block">'+esc(token)+'</div>','<button class="btn" data-close="1">Close</button><button class="btn btn-primary" id="tokCopy">Copy token</button>').querySelector("#tokCopy").onclick=()=>copyText(token,"Token copied");
-    switchPa("api");
+  const zone=m.querySelector("#apiTokensZone");
+  if(!AUTH){
+    zone.innerHTML='<div style="display:flex;align-items:center"><h2 style="font-size:18px;flex:1">Access tokens</h2></div>'
+     +'<div class="tbl-wrap" style="margin-top:10px"><div class="empty-state"><div class="big-ico">🔑</div><h2>Sign in to manage API tokens</h2><p class="sub-text" style="margin:6px 0 14px">API tokens are issued by your DevxyzLogin server account and work across devices. In local mode no tokens are created.</p><button class="btn btn-green" id="tokSignIn">Sign in</button></div></div>';
+    zone.querySelector("#tokSignIn").onclick=()=>{S.session=null;save();gate()};
+    return;
+  }
+  const renderRows=tokens=>{
+    zone.innerHTML='<div style="display:flex;align-items:center"><h2 style="font-size:18px;flex:1">Access tokens</h2><button class="btn btn-green" id="tokNew">New Token</button></div>'
+     +'<div class="tbl-wrap" style="margin-top:10px"><table class="tbl" style="min-width:0"><thead><tr><th>#</th><th>Name</th><th>Token</th><th>Created</th><th>Last used</th><th></th></tr></thead><tbody>'
+     +(tokens.length?tokens.map((t,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(t.name)+'</td><td>'+esc(t.prefix)+'••••••••</td><td>'+esc(fmtDate(t.createdAt))+'</td><td>'+(t.lastUsedAt?esc(fmtDate(t.lastUsedAt)):"Never")+'</td><td><button class="btn btn-sm" data-tokdel="'+t.id+'">Delete</button></td></tr>').join(""):'<tr><td colspan="6" class="sub-text" style="text-align:center">No tokens yet</td></tr>')
+     +'</tbody></table></div>';
+    zone.querySelector("#tokNew").onclick=async()=>{
+      const name=await promptDialog("New Token","Token name","My token","Create token"); if(!name)return;
+      try{ const j=await DL.createToken(name.trim()||"Token");
+        openModal("Token created",'<p class="sub-text" style="margin-bottom:9px">Copy it now — the full token is shown only once. Only its hash is kept on the server.</p><div class="code-block">'+esc(j.token)+'</div>','<button class="btn" data-close="1">Close</button><button class="btn btn-primary" id="tokCopy">Copy token</button>').querySelector("#tokCopy").onclick=()=>copyText(j.token,"Token copied");
+        load();
+      }catch(e){ toast(e.network?"Offline — tokens can't be created right now":"Server error: "+e.message,1) }
+    };
+    zone.querySelectorAll("[data-tokdel]").forEach(b=>b.onclick=async()=>{if(await confirmDialog("Delete token","This token will stop working immediately.","Delete")){try{await DL.deleteToken(b.dataset.tokdel);load()}catch(e){toast(e.network?"Offline — token was not deleted":"Server error: "+e.message,1)}}});
   };
-  m.querySelectorAll("[data-tokdel]").forEach(b=>b.onclick=async()=>{if(await confirmDialog("Delete token","This token will stop working immediately.","Delete")){S.tokens=S.tokens.filter(t=>t.id!==b.dataset.tokdel);save();switchPa("api")}});
-  m.querySelectorAll("[data-tokcopy]").forEach(a=>a.onclick=()=>{const t=S.tokens.find(x=>x.id===a.dataset.tokcopy);if(t)copyText(t.token,"Token copied")});
+  const load=async()=>{
+    zone.innerHTML='<div style="display:flex;align-items:center"><h2 style="font-size:18px;flex:1">Access tokens</h2></div><p class="sub-text" style="margin-top:10px">Loading tokens from the server…</p>';
+    try{ renderRows(await DL.loadTokens()) }catch(e){ zone.innerHTML='<div style="display:flex;align-items:center"><h2 style="font-size:18px;flex:1">Access tokens</h2></div><p class="sub-text" style="margin-top:10px">'+(e.network?"Offline — tokens can't be loaded right now.":"Couldn't load tokens: "+esc(e.message))+'</p>' }
+  };
+  load();
 }
 function paVault(m){
   m.innerHTML='<h1>Vault password manager</h1><div class="kv-row"><span class="kl">Vault chrome extension</span><span class="kv">'+switchHtml(S.vaultExt,"vaultSw")+'</span></div><p class="sub-text">The Vault extension saves and fills passwords inside your profiles, synced per profile.</p>';
@@ -1924,14 +1964,397 @@ function paRestore(m){
      + S.deleted.map(p=>'<tr><td><b>'+esc(p.name)+'</b></td><td>'+esc(p.deletedAt||"")+'</td><td>'+esc(p.deletedBy||"")+'</td><td><button class="btn btn-sm btn-outline-green" data-rst="'+p.id+'">Restore</button> <button class="btn btn-sm btn-danger-o" data-rstdel="'+p.id+'">Delete forever</button></td></tr>').join("")
      +'</tbody></table></div>'
     :'<div class="tbl-wrap"><div class="empty-state"><div class="big-ico">🗂</div><h2>No profiles yet</h2></div></div>');
-  const doRestore=id=>{const i=S.deleted.findIndex(p=>p.id===id);if(i<0)return;const p=S.deleted.splice(i,1)[0];delete p.deletedAt;delete p.deletedBy;p.lastUpdate=nowStr();S.profiles.unshift(p);save();switchPa("restore");toast("Profile restored")};
+  const doRestore=id=>{const i=S.deleted.findIndex(p=>p.id===id);if(i<0)return;const p=S.deleted.splice(i,1)[0];delete p.deletedAt;delete p.deletedBy;p.lastUpdate=nowStr();S.profiles.unshift(p);save();if(window.DL)DL.profileRestored(p);switchPa("restore");toast("Profile restored")};
   m.querySelectorAll("[data-rst]").forEach(b=>b.onclick=()=>doRestore(b.dataset.rst));
-  m.querySelectorAll("[data-rstdel]").forEach(b=>b.onclick=async()=>{if(await confirmDialog("Delete forever","This profile cannot be recovered.","Delete forever")){S.deleted=S.deleted.filter(p=>p.id!==b.dataset.rstdel);save();switchPa("restore")}});
-  const ra=m.querySelector("#rstAll"); if(ra)ra.onclick=()=>{while(S.deleted.length){const p=S.deleted.pop();delete p.deletedAt;delete p.deletedBy;S.profiles.unshift(p)}save();switchPa("restore");toast("All profiles restored")};
+  m.querySelectorAll("[data-rstdel]").forEach(b=>b.onclick=async()=>{if(await confirmDialog("Delete forever","This profile cannot be recovered.","Delete forever")){const p=S.deleted.find(x=>x.id===b.dataset.rstdel);S.deleted=S.deleted.filter(x=>x.id!==b.dataset.rstdel);save();if(p&&window.DL)DL.profilePurged(p);switchPa("restore")}});
+  const ra=m.querySelector("#rstAll"); if(ra)ra.onclick=()=>{const all=[...S.deleted];while(S.deleted.length){const p=S.deleted.pop();delete p.deletedAt;delete p.deletedBy;S.profiles.unshift(p)}save();if(window.DL)all.forEach(p=>DL.profileRestored(p));switchPa("restore");toast("All profiles restored")};
 }
 /* ================= boot ================= */
 applyTheme();
 gate();
+</script>
+<script>
+/* ================= DevxyzLogin server wiring v4 — real auth, sync, tokens, proxy check =================
+   Auth lives under its own localStorage key (devxyzlogin_auth), separate from the
+   devxyzlogin_v1 app store. When AUTH is null the app is fully local and makes
+   ZERO network calls. Server items are tracked with a `serverId` field on the
+   local entity; the server is the source of truth for serverId-bearing items,
+   local-only items upload via POST and gain serverIds. Mutations are optimistic:
+   a server (HTTP) failure rolls the change back with an honest toast, a network
+   failure keeps the change locally, flags it _dirty and shows the Offline state —
+   flushDirty() replays dirty items when the connection returns. */
+const AUTH_KEY="devxyzlogin_auth", PURGE_KEY="devxyzlogin_purged";
+const API_DEFAULT="https://devxyzlogin-server.vercel.app";
+let AUTH=null;
+try{const a=JSON.parse(localStorage.getItem(AUTH_KEY));if(a&&typeof a.token==="string"&&a.token)AUTH={token:a.token,email:a.email||"",workspaceId:a.workspaceId||null,purged:Array.isArray(a.purged)?a.purged:[]}}catch(e){}
+let syncState=AUTH?"synced":"local"; /* synced | local | offline */
+let syncBusy=false, flushBusy=false;
+function apiBase(){const u=(S.serverUrl||"").trim().replace(/\/$/,"");return u||API_DEFAULT}
+function saveAuth(){if(AUTH)localStorage.setItem(AUTH_KEY,JSON.stringify(AUTH));else localStorage.removeItem(AUTH_KEY)}
+function loadPurged(email){try{const m=JSON.parse(localStorage.getItem(PURGE_KEY))||{};return Array.isArray(m[email])?m[email]:[]}catch(e){return[]}}
+function addPurged(email,sid){try{const m=JSON.parse(localStorage.getItem(PURGE_KEY))||{};m[email]=[...new Set([...(m[email]||[]),sid])];localStorage.setItem(PURGE_KEY,JSON.stringify(m))}catch(e){}}
+function chipHtml(){if(!AUTH)return '<span style="color:var(--muted)">●</span> Local mode';if(syncState==="offline")return '<span style="color:#e8a13a">●</span> Offline — changes saved locally';return '<span style="color:#22c07a">●</span> Synced'}
+function updateSyncChip(){const el=document.getElementById("syncChip");if(!el)return;el.innerHTML=chipHtml();el.title=!AUTH?"Local mode — data stays on this device":(syncState==="offline"?"Server unreachable — changes are saved locally and sync when you are back":"Signed in as "+AUTH.email+" — profiles sync with the DevxyzLogin server")}
+function setOnline(){if(AUTH&&syncState!=="synced"){syncState="synced";updateSyncChip()}if(AUTH&&!syncBusy)flushDirty()}
+function setOffline(){if(AUTH&&syncState!=="offline"){syncState="offline";updateSyncChip()}}
+window.addEventListener("online",()=>{if(AUTH)syncFromServer()});
+window.addEventListener("offline",()=>setOffline());
+function authExpired(){AUTH=null;saveAuth();syncState="local";updateSyncChip();toast("Session expired — you are in local mode now. Your data on this device is unchanged.",1)}
+
+async function api(path,opts){
+  opts=opts||{};
+  const headers=Object.assign({"Content-Type":"application/json"},opts.headers||{});
+  if(AUTH){headers["Authorization"]="Bearer "+AUTH.token;if(AUTH.workspaceId)headers["X-Workspace-Id"]=AUTH.workspaceId}
+  let r;
+  try{r=await fetch(apiBase()+path,{method:opts.method||"GET",headers:headers,body:opts.body!==undefined?JSON.stringify(opts.body):undefined})}
+  catch(e){setOffline();const er=new Error("network unreachable");er.network=true;throw er}
+  let j=null; try{j=await r.json()}catch(e){}
+  if(r.status===401&&AUTH&&path.indexOf("/api/auth/")!==0){authExpired();const er=new Error("session expired");er.status=401;throw er}
+  if(!r.ok||!j||j.ok===false){const er=new Error((j&&j.error)||("HTTP "+r.status));er.status=r.status;er.body=j;throw er}
+  setOnline();
+  return j;
+}
+
+/* ---------- web <-> shared-schema mapping ---------- */
+const OS_KEY_TO_NAME={}; Object.keys(OS_CONFIG).forEach(n=>{OS_KEY_TO_NAME[OS_CONFIG[n].key]=n});
+function capMode(v){v=String(v||"").toLowerCase();return v==="noise"?"Noise":v==="block"?"Block":"Off"}
+function toServerProfile(p){
+  const fp=p.fp||{};
+  let px=p.proxy||{};
+  if(px.proxyId){const sp=S.proxies.find(x=>x.id===px.proxyId);if(sp)px=Object.assign({},px,{host:px.host||sp.host,port:px.port||sp.port,type:px.type||sp.type,login:px.login||sp.login,password:px.password||sp.password})}
+  return {
+    name:p.name||"Untitled profile", notes:p.notes||"",
+    folderIds:(p.folderIds&&p.folderIds.length?p.folderIds.slice():(p.folderId?[p.folderId]:[])),
+    tags:(p.tags||[]).map(t=>typeof t==="string"?t:t.text),
+    status:p.state==="running"?"running":"ready",
+    os:(OS_CONFIG[fp.os]||{}).key||"linux",
+    fingerprint:{
+      navigator:{userAgent:fp.ua||"",browserVersion:fp.browserVersion||"",screenResolution:fp.screen||"1920x1080",languages:fp.languages||["en-US"],platform:fp.platform||"",cpuCores:fp.cpu||8,ram:fp.ram||8,doNotTrack:!!fp.doNotTrack,languagesAuto:fp.languagesAuto!==false},
+      fontsMasking:fp.fontsMasking!==false,
+      mediaDevices:{videoInputs:fp.mediaVideo||0,audioInputs:fp.mediaAudioIn||0,audioOutputs:fp.mediaAudioOut||0},
+      mediaMasking:fp.mediaMasking!==false,
+      hardware:{canvasMode:String(fp.canvas||"off").toLowerCase(),webglVendor:fp.webglVendor||"",webglRenderer:fp.webglRenderer||"",webglNoise:fp.webgl==="Noise",audioNoise:fp.audioContext==="Noise",clientRectsNoise:fp.clientRects==="Noise"},
+      webrtcMode:fp.webrtc==="Based on IP"?"basedOnIp":String(fp.webrtc||"off").toLowerCase(),
+      timezone:{auto:fp.timezoneAuto!==false,zone:fp.timezone||"UTC"},
+      geolocation:{mode:String(fp.geoMode||"prompt").toLowerCase(),auto:fp.geoAuto!==false,lat:parseFloat(fp.geoLat)||0,lon:parseFloat(fp.geoLong)||0}
+    },
+    proxy:{mode:px.mode==="builtin"?"devxyz":(px.mode||"none"),type:String(px.type||"http").toLowerCase(),host:px.host||"",port:parseInt(px.port,10)||0,username:px.login||"",password:px.password||"",buyCountry:px.buyCountry||"FR",buyType:px.buyType||"Residential",dedicated:!!px.dedicated,changeIpUrl:px.changeIpUrl||""},
+    extensions:(p.extensions||[]).slice(),
+    bookmarks:String(p.bookmarks||"").split("\n"),
+    /* web-native extras — the server stores unknown fields verbatim, so the web model round-trips losslessly */
+    fp:fp, webProxy:p.proxy||{}, webTags:p.tags||[], state:p.state||"ready",
+    statusField:p.statusField||null, pinned:!!p.pinned, cloudAndroid:!!p.cloudAndroid,
+    lastLaunch:p.lastLaunch||"", lastUpdate:p.lastUpdate||"", createdAtLocal:p.createdAt||"",
+    cookies:p.cookies||[], history:p.history||[], folderId:p.folderId||""
+  };
+}
+function fpFromSchema(sp){
+  const f=sp.fingerprint||{}, nav=f.navigator||{}, hw=f.hardware||{}, md=f.mediaDevices||{}, tz=f.timezone||{}, geo=f.geolocation||{};
+  const osName=OS_KEY_TO_NAME[sp.os]||"Linux";
+  const base=genFingerprint(osName);
+  return Object.assign(base,{
+    os:osName, ua:nav.userAgent||base.ua, browserVersion:nav.browserVersion||base.browserVersion,
+    screen:nav.screenResolution||base.screen, languages:(nav.languages&&nav.languages.length)?nav.languages:base.languages,
+    platform:nav.platform||base.platform, cpu:nav.cpuCores||base.cpu, ram:nav.ram||base.ram, doNotTrack:!!nav.doNotTrack,
+    languagesAuto:nav.languagesAuto!==false,
+    fontsMasking:f.fontsMasking!==false, mediaMasking:f.mediaMasking!==false,
+    mediaVideo:md.videoInputs!=null?md.videoInputs:base.mediaVideo, mediaAudioIn:md.audioInputs!=null?md.audioInputs:base.mediaAudioIn, mediaAudioOut:md.audioOutputs!=null?md.audioOutputs:base.mediaAudioOut,
+    canvas:capMode(hw.canvasMode), webgl:hw.webglNoise?"Noise":"Off", webglVendor:hw.webglVendor||base.webglVendor, webglRenderer:hw.webglRenderer||base.webglRenderer,
+    audioContext:hw.audioNoise?"Noise":"Off", clientRects:hw.clientRectsNoise?"Noise":"Off",
+    webrtc:f.webrtcMode==="basedOnIp"?"Based on IP":(f.webrtcMode==="disabled"?"Disabled":"Off"),
+    timezoneAuto:tz.auto!==false, timezone:tz.zone||base.timezone,
+    geoMode:geo.mode?(geo.mode.charAt(0).toUpperCase()+geo.mode.slice(1)):base.geoMode, geoAuto:geo.auto!==false,
+    geoLat:String(geo.lat!=null?geo.lat:base.geoLat), geoLong:String(geo.lon!=null?geo.lon:base.geoLong)
+  });
+}
+function proxyFromSchema(px){
+  px=px||{};
+  return Object.assign(defaultProxy(),{mode:px.mode==="devxyz"?"builtin":(px.mode||"none"),type:String(px.type||"http").toUpperCase(),host:px.host||"",port:px.port?String(px.port):"",login:px.username||"",password:px.password||"",buyCountry:px.buyCountry||"FR",buyType:px.buyType||"Residential",dedicated:!!px.dedicated,changeIpUrl:px.changeIpUrl||""});
+}
+function fromServerProfile(sp){
+  const fp=sp.fp?migrateFp(clone(sp.fp)):fpFromSchema(sp);
+  const tags=(Array.isArray(sp.webTags)&&sp.webTags.length)?clone(sp.webTags):(sp.tags||[]).map((t,i)=>typeof t==="string"?{text:t,color:TAG_COLORS[i%TAG_COLORS.length]}:t);
+  const p={id:sp.id, serverId:sp.id, name:sp.name||"Untitled profile", notes:sp.notes||"",
+    state:sp.state||(sp.status==="running"?"running":"ready"),
+    folderId:(sp.folderIds||[])[0]||sp.folderId||"", folderIds:sp.folderIds||[],
+    tags:tags, statusField:sp.statusField||{...STATUS_FIELDS[0]},
+    pinned:!!sp.pinned, cloudAndroid:!!sp.cloudAndroid,
+    lastLaunch:sp.lastLaunch||"", lastUpdate:sp.lastUpdate||fmtDate(sp.updatedAt||sp.createdAt||Date.now()),
+    proxy:sp.webProxy?Object.assign(defaultProxy(),clone(sp.webProxy)):proxyFromSchema(sp.proxy),
+    fp:fp, cookies:sp.cookies||[], extensions:sp.extensions||[],
+    bookmarks:Array.isArray(sp.bookmarks)?sp.bookmarks.join("\n"):(sp.bookmarks||""),
+    createdAt:sp.createdAtLocal||fmtDate(sp.createdAt||Date.now()),
+    history:sp.history||[{t:fmtDate(sp.createdAt||Date.now()),a:"Profile created"}]};
+  if(sp.deletedAt){p.deletedAt=fmtDate(sp.deletedAt);p.deletedBy=(AUTH&&AUTH.email)||""}
+  return p;
+}
+function toServerSharedProxy(px){
+  return {id:px.id, name:px.name||"Proxy",
+    proxy:{mode:"custom",type:String(px.type||"http").toLowerCase(),host:px.host||"",port:parseInt(px.port,10)||0,username:px.login||"",password:px.password||""},
+    country:px.country||"", flag:px.flag||"", ip:px.ip||"", state:px.state||"Connected", kind:px.kind||"Custom", notes:px.notes||"", archived:!!px.archived};
+}
+function fromServerSharedProxy(sp){
+  const pr=sp.proxy||{};
+  return {id:sp.id, serverId:sp.id, name:sp.name||"Proxy", type:String(pr.type||"http").toUpperCase(), host:pr.host||"", port:pr.port?String(pr.port):"", login:pr.username||"", password:pr.password||"", country:sp.country||"", flag:sp.flag||"", ip:sp.ip||pr.host||"", state:sp.state||"Connected", kind:sp.kind||"Custom", notes:sp.notes||"", archived:!!sp.archived};
+}
+
+/* ---------- merge (server -> local) ---------- */
+function adoptFolderId(f,newId){
+  const oldId=f.id; f.id=newId; f.serverId=newId; delete f._dirty;
+  S.profiles.concat(S.deleted).forEach(p=>{let touched=false;if(p.folderId===oldId){p.folderId=newId;touched=true}if(Array.isArray(p.folderIds)&&p.folderIds.includes(oldId)){p.folderIds=p.folderIds.map(x=>x===oldId?newId:x);touched=true}if(touched&&p.serverId)p._dirty=true});
+  if(activeFolder===oldId)activeFolder=newId;
+}
+async function mergeWorkspaces(serverList){
+  const activeName=S.workspace;
+  for(const w of [...S.workspaces]){
+    if(serverList.find(x=>x.id===w.id))continue;
+    const byName=serverList.find(x=>x.name===w.name);
+    if(byName){w.id=byName.id;continue}
+    try{const j=await api("/api/workspaces",{method:"POST",body:{name:w.name}});w.id=j.workspace.id;serverList.push(j.workspace)}
+    catch(e){/* stays local-only; retried on next sync */}
+  }
+  const serverIds=new Set(serverList.map(w=>w.id));
+  const localOnly=S.workspaces.filter(w=>!serverIds.has(w.id));
+  S.workspaces=[...serverList.map(w=>({id:w.id,name:w.name})),...localOnly];
+  const act=S.workspaces.find(w=>w.name===activeName)||S.workspaces.find(w=>w.id===AUTH.workspaceId)||S.workspaces[0];
+  if(act){AUTH.workspaceId=act.id;S.workspace=act.name}
+}
+function mergeProfiles(serverActive,serverTrash){
+  const purged=new Set(AUTH.purged||[]);
+  const findLocal=sid=>{let i=S.profiles.findIndex(p=>p.serverId===sid);if(i>-1)return{arr:S.profiles,i};i=S.deleted.findIndex(p=>p.serverId===sid);if(i>-1)return{arr:S.deleted,i};return null};
+  const applyList=(list,wantTrash)=>{
+    const seen=new Set();
+    for(const sp of list){
+      if(purged.has(sp.id))continue;
+      seen.add(sp.id);
+      const loc=findLocal(sp.id);
+      if(loc&&loc.arr[loc.i]._dirty)continue; /* unsynced local changes win; flush replays them */
+      const mapped=fromServerProfile(sp);
+      if(loc){mapped.id=loc.arr[loc.i].id;loc.arr.splice(loc.i,1)}
+      (wantTrash?S.deleted:S.profiles).unshift(mapped);
+    }
+    return seen;
+  };
+  const activeSeen=applyList(serverActive,false);
+  const trashSeen=applyList(serverTrash,true);
+  S.profiles=S.profiles.filter(p=>!p.serverId||activeSeen.has(p.serverId)||p._dirty);
+  S.deleted=S.deleted.filter(p=>!p.serverId||trashSeen.has(p.serverId)||p._dirty);
+}
+function mergeFolders(serverFolders){
+  const seen=new Set();
+  for(const sf of serverFolders){
+    seen.add(sf.id);
+    const loc=S.folders.find(f=>f.serverId===sf.id);
+    if(loc){if(!loc._dirty)loc.name=sf.name}
+    else S.folders.push({id:sf.id,serverId:sf.id,name:sf.name});
+  }
+  S.folders=S.folders.filter(f=>!f.serverId||seen.has(f.serverId)||f._dirty);
+}
+function mergeProxies(serverProxies){
+  const seen=new Set();
+  for(const sp of serverProxies){
+    seen.add(sp.id);
+    const i=S.proxies.findIndex(x=>x.serverId===sp.id);
+    if(i>-1){if(S.proxies[i]._dirty)continue;const mapped=fromServerSharedProxy(sp);mapped.id=S.proxies[i].id;S.proxies[i]=mapped}
+    else S.proxies.push(fromServerSharedProxy(sp));
+  }
+  S.proxies=S.proxies.filter(x=>!x.serverId||seen.has(x.serverId)||x._dirty);
+}
+async function syncFromServer(){
+  if(!AUTH||syncBusy)return; syncBusy=true;
+  try{
+    const ws=await api("/api/workspaces");
+    await mergeWorkspaces(ws.workspaces||[]);
+    saveAuth();
+    const res=await Promise.all([api("/api/profiles"),api("/api/profiles?deleted=1"),api("/api/folders"),api("/api/proxies")]);
+    mergeFolders(res[2].folders||[]);
+    mergeProfiles(res[0].profiles||[],res[1].profiles||[]);
+    mergeProxies(res[3].proxies||[]);
+    save();
+    await flushDirty(true);
+    save();
+    if(S.session){showPage(currentPage);if(currentPage==="pa")switchPa(paPage)}
+  }catch(e){ if(e.status!==401)setOffline(); }
+  finally{syncBusy=false}
+}
+
+/* ---------- flush (local -> server): creates, dirty patches, pending restores/deletes ---------- */
+async function flushDirty(force){
+  if(!AUTH||flushBusy)return; if(syncBusy&&!force)return; flushBusy=true;
+  try{
+    for(const f of [...S.folders]){
+      if(!f.serverId){try{const j=await api("/api/folders",{method:"POST",body:{name:f.name}});adoptFolderId(f,j.folder.id)}catch(e){f._dirty=true}}
+      else if(f._dirty){try{await api("/api/folders/"+f.serverId,{method:"PATCH",body:{name:f.name}});delete f._dirty}catch(e){if(!e.network)delete f._dirty}}
+    }
+    for(const p of [...S.profiles]){
+      if(!p.serverId){try{const j=await api("/api/profiles",{method:"POST",body:toServerProfile(p)});p.serverId=j.profile.id;delete p._dirty;delete p._restorePending}catch(e){p._dirty=true}}
+      else{
+        if(p._restorePending){try{await api("/api/profiles/"+p.serverId+"/restore",{method:"POST"});delete p._restorePending}catch(e){/* stays pending */}}
+        if(p._dirty){try{await api("/api/profiles/"+p.serverId,{method:"PATCH",body:toServerProfile(p)});delete p._dirty}catch(e){if(!e.network)delete p._dirty}}
+      }
+    }
+    for(const p of [...S.deleted]){
+      if(!p.serverId){try{const j=await api("/api/profiles",{method:"POST",body:toServerProfile(p)});p.serverId=j.profile.id;await api("/api/profiles/"+p.serverId,{method:"DELETE"});delete p._dirty}catch(e){p._dirty=true}}
+      else if(p._dirty){try{await api("/api/profiles/"+p.serverId,{method:"DELETE"});delete p._dirty}catch(e){if(!e.network)delete p._dirty}}
+    }
+    for(const px of [...S.proxies]){
+      if(!px.serverId){try{const j=await api("/api/proxies",{method:"POST",body:toServerSharedProxy(px)});px.serverId=j.proxy.id;delete px._dirty}catch(e){px._dirty=true}}
+      else if(px._dirty){try{await api("/api/proxies/"+px.serverId,{method:"PATCH",body:toServerSharedProxy(px)});delete px._dirty}catch(e){if(!e.network)delete px._dirty}}
+    }
+    save();
+  }finally{flushBusy=false}
+}
+
+/* ---------- DL: the sync facade the UI hooks call ---------- */
+const DL={
+  isSynced:()=>!!AUTH,
+  chip:updateSyncChip,
+  accountLabel:()=>AUTH?esc(AUTH.email)+" · Synced account":"Local mode — data stays on this device",
+  bootSync(){updateSyncChip();if(AUTH&&S.session)syncFromServer()},
+  enterLocal(email){AUTH=null;saveAuth();syncState="local";S.email=email;S.session={email:email,local:true};save();gate();updateSyncChip();toast("Continuing in local mode — data stays on this device")},
+  localOnly(){AUTH=null;saveAuth();syncState="local";updateSyncChip()},
+  signOut(){const had=!!AUTH;AUTH=null;saveAuth();syncState="local";S.session=null;save();gate();toast(had?"Signed out — local data on this device is unchanged":"Logged out")},
+  async doAuth(mode,email,password,name,errEl,btn){
+    const old=btn.textContent; btn.disabled=true; btn.textContent=mode==="register"?"Creating account…":"Signing in…"; errEl.classList.add("hidden");
+    try{
+      const j=await api(mode==="register"?"/api/auth/register":"/api/auth/login",{method:"POST",body:mode==="register"?{name:name,email:email,password:password}:{email:email,password:password}});
+      AUTH={token:j.token,email:j.user.email,workspaceId:j.workspace?j.workspace.id:null,purged:loadPurged(j.user.email)};
+      saveAuth(); syncState="synced";
+      S.email=j.user.email; S.session={email:j.user.email}; save();
+      gate(); updateSyncChip();
+      toast(mode==="register"?"Account created — welcome to DevxyzLogin!":"Welcome back!");
+      syncFromServer();
+    }catch(e){
+      errEl.textContent="⚠ "+(e.network?"Can't reach the DevxyzLogin server — check your connection, or continue in local mode":e.status===401?"Wrong email or password":e.status===409?"This email is already registered — log in instead":e.message);
+      errEl.classList.remove("hidden");
+    }finally{btn.disabled=false;btn.textContent=old}
+  },
+  async profileSaved(p,isNew,snap){
+    if(!AUTH)return;
+    if(isNew||!p.serverId){
+      try{const j=await api("/api/profiles",{method:"POST",body:toServerProfile(p)});p.serverId=j.profile.id;delete p._dirty;save()}
+      catch(e){
+        if(e.network){p._dirty=true;save();setOffline();toast("Offline — profile saved locally and will sync when you are back",1)}
+        else if(e.status!==401){S.profiles=S.profiles.filter(x=>x!==p);save();showPage(currentPage);toast("Server error: "+e.message+" — profile was not created",1)}
+      }
+      return;
+    }
+    try{await api("/api/profiles/"+p.serverId,{method:"PATCH",body:toServerProfile(p)});delete p._dirty;save()}
+    catch(e){
+      if(e.network){p._dirty=true;save();setOffline();toast("Offline — changes saved locally and will sync when you are back",1)}
+      else if(e.status!==401){if(snap){const i=S.profiles.findIndex(x=>x.id===p.id);if(i>-1)S.profiles[i]=snap;save();showPage(currentPage)}toast("Server error: "+e.message+" — changes were not saved",1)}
+    }
+  },
+  async profileCloned(src,cp){
+    if(!AUTH)return;
+    if(!src.serverId){cp._dirty=true;save();flushDirty();return}
+    try{const j=await api("/api/profiles/"+src.serverId+"/clone",{method:"POST"});cp.serverId=j.profile.id;cp.name=j.profile.name;delete cp._dirty;save();showPage(currentPage)}
+    catch(e){
+      if(e.network){cp._dirty=true;save();setOffline();toast("Offline — clone saved locally and will sync when you are back",1)}
+      else if(e.status!==401){S.profiles=S.profiles.filter(x=>x!==cp);save();showPage(currentPage);toast("Server error: "+e.message+" — clone was not created",1)}
+    }
+  },
+  async profileDeleted(p){
+    if(!AUTH)return;
+    if(!p.serverId){p._dirty=true;save();flushDirty();return}
+    try{await api("/api/profiles/"+p.serverId,{method:"DELETE"});delete p._dirty;save()}
+    catch(e){
+      if(e.network){p._dirty=true;save();setOffline();toast("Offline — delete saved locally and will sync when you are back",1)}
+      else if(e.status!==401){const i=S.deleted.indexOf(p);if(i>-1){S.deleted.splice(i,1);delete p.deletedAt;delete p.deletedBy;S.profiles.unshift(p)}save();showPage(currentPage);toast("Server error: "+e.message+" — profile was not deleted",1)}
+    }
+  },
+  async profileRestored(p){
+    if(!AUTH)return;
+    if(!p.serverId){p._dirty=true;save();flushDirty();return}
+    try{await api("/api/profiles/"+p.serverId+"/restore",{method:"POST"});delete p._dirty;delete p._restorePending;save()}
+    catch(e){
+      if(e.network){p._dirty=true;p._restorePending=true;save();setOffline();toast("Offline — restore saved locally and will sync when you are back",1)}
+      else if(e.status!==401){const i=S.profiles.indexOf(p);if(i>-1){S.profiles.splice(i,1);p.deletedAt=p.deletedAt||nowStr();p.deletedBy=S.email;S.deleted.unshift(p)}save();if(currentPage==="pa")switchPa("restore");toast("Server error: "+e.message+" — profile was not restored",1)}
+    }
+  },
+  profilePurged(p){if(AUTH&&p.serverId){addPurged(AUTH.email,p.serverId);if(!AUTH.purged)AUTH.purged=[];if(!AUTH.purged.includes(p.serverId))AUTH.purged.push(p.serverId);saveAuth()}},
+  async profileUpdated(p){
+    if(!AUTH)return;
+    if(!p.serverId){p._dirty=true;save();flushDirty();return}
+    try{await api("/api/profiles/"+p.serverId,{method:"PATCH",body:toServerProfile(p)});delete p._dirty;save()}
+    catch(e){
+      if(e.network){p._dirty=true;save();setOffline()}
+      else if(e.status!==401){toast("Server error: "+e.message+" — change was not synced",1);syncFromServer()}
+    }
+  },
+  profilesUpdated(list){list.forEach(p=>DL.profileUpdated(p))},
+  async folderCreated(f){
+    if(!AUTH)return;
+    try{const j=await api("/api/folders",{method:"POST",body:{name:f.name}});adoptFolderId(f,j.folder.id);save();showPage(currentPage)}
+    catch(e){
+      if(e.network){f._dirty=true;save();setOffline()}
+      else if(e.status!==401){S.folders=S.folders.filter(x=>x!==f);save();showPage(currentPage);toast("Server error: "+e.message+" — folder was not created",1)}
+    }
+  },
+  async proxySaved(rec,isEdit,snap){
+    if(!AUTH)return;
+    if(isEdit&&!rec.serverId){rec._dirty=true;save();flushDirty();return}
+    if(isEdit){
+      try{await api("/api/proxies/"+rec.serverId,{method:"PATCH",body:toServerSharedProxy(rec)});delete rec._dirty;save()}
+      catch(e){
+        if(e.network){rec._dirty=true;save();setOffline();toast("Offline — proxy saved locally and will sync when you are back",1)}
+        else if(e.status!==401){if(snap){const i=S.proxies.findIndex(x=>x.id===rec.id);if(i>-1)S.proxies[i]=snap;save();showPage("proxies")}toast("Server error: "+e.message+" — proxy was not saved",1)}
+      }
+      return;
+    }
+    try{const j=await api("/api/proxies",{method:"POST",body:toServerSharedProxy(rec)});rec.serverId=j.proxy.id;delete rec._dirty;save()}
+    catch(e){
+      if(e.network){rec._dirty=true;save();setOffline();toast("Offline — proxy saved locally and will sync when you are back",1)}
+      else if(e.status!==401){S.proxies=S.proxies.filter(x=>x!==rec);save();showPage("proxies");toast("Server error: "+e.message+" — proxy was not added",1)}
+    }
+  },
+  proxiesCreated(list){list.forEach(px=>DL.proxySaved(px,false,null))},
+  async proxyUpdated(px){
+    if(!AUTH)return;
+    if(!px.serverId){px._dirty=true;save();flushDirty();return}
+    try{await api("/api/proxies/"+px.serverId,{method:"PATCH",body:toServerSharedProxy(px)});delete px._dirty;save()}
+    catch(e){
+      if(e.network){px._dirty=true;save();setOffline()}
+      else if(e.status!==401){toast("Server error: "+e.message+" — change was not synced",1);syncFromServer()}
+    }
+  },
+  async buyBuiltin(cat,country){
+    closeModal();
+    try{
+      const j=await api("/api/proxies/builtin",{method:"POST",body:{country:country,type:cat.type.toLowerCase()}});
+      const mapped=fromServerSharedProxy(j.proxy);
+      if(!S.proxies.find(x=>x.serverId===mapped.serverId))S.proxies.push(mapped);
+      save(); showPage("proxies"); toast("Built-in "+cat.type+" proxy added ("+country+")");
+    }catch(e){
+      if(e.status===501){openModal("Residential provider not configured",'<p class="sub-text" style="font-size:13.5px">The built-in proxy pool needs a residential provider plugged into the DevxyzLogin server (providers config on the server). Until then, buying is unavailable — but <b>Your proxy</b> works fully: add any proxy you own on this page or inside a profile, and the checker will verify it for real.</p>','<button class="btn" data-close="1">Close</button><button class="btn btn-primary" id="bcCustom">Add custom proxy</button>').querySelector("#bcCustom").onclick=()=>{closeModal();customProxyDialog()}}
+      else if(e.network)toast("Offline — can't reach the server to buy a built-in proxy",1);
+      else if(e.status!==401)toast("Server error: "+e.message,1);
+    }
+  },
+  async switchWorkspace(w){
+    AUTH.workspaceId=w.id; saveAuth(); S.workspace=w.name;
+    S.profiles=S.profiles.filter(p=>!p.serverId); S.deleted=S.deleted.filter(p=>!p.serverId);
+    S.folders=S.folders.filter(f=>!f.serverId); S.proxies=S.proxies.filter(x=>!x.serverId);
+    save(); renderSidebar(); renderTopbar();
+    await syncFromServer();
+  },
+  async createWorkspace(name){
+    try{
+      const j=await api("/api/workspaces",{method:"POST",body:{name:name}});
+      const w={id:j.workspace.id,name:j.workspace.name}; S.workspaces.push(w); save();
+      toast("Workspace created"); DL.switchWorkspace(w);
+    }catch(e){
+      if(e.network){S.workspaces.push({id:uid(),name:name});S.workspace=name;save();renderSidebar();renderTopbar();setOffline();toast("Offline — workspace saved locally and will be created when you are back",1)}
+      else if(e.status!==401)toast("Server error: "+e.message,1);
+    }
+  },
+  async loadTokens(){return (await api("/api/tokens")).tokens||[]},
+  async createToken(name){return api("/api/tokens",{method:"POST",body:{name:name}})},
+  async deleteToken(id){return api("/api/tokens/"+encodeURIComponent(id),{method:"DELETE"})}
+};
+window.DL=DL;
+updateSyncChip();
+if(AUTH&&S.session)syncFromServer();
 </script>
 </body>
 </html>

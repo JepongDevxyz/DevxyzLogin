@@ -52,6 +52,24 @@ with **exactly** these field names. JSON is the interchange format
 
 Other v3 additive fields (all defaulted, so v1/v2 stores load unchanged): `navigator.languagesAuto` (bool, `true`), `fingerprint.mediaMasking` (bool, `true`), `browser.saveTabs` (bool, `true`), `browser.allowInstallExtensions` (bool, `true`), `SharedProxy.country` / `SharedProxy.flag` (strings, `""`).
 
+## v4 additive fields — Android CLIENT-LOCAL only (never on the wire)
+
+Android v2.2.0 syncs profiles with the live server
+(`https://devxyzlogin-server.vercel.app`). Three fields exist only in the
+local Android store and are **stripped from every sync upload**, so the
+wire schema above is unchanged:
+
+| Field | Type | Notes |
+|---|---|---|
+| `serverId` | string \| null | The profile's id on the server once uploaded; `null` = not uploaded yet |
+| `dirty` | bool | Local edits not yet pushed; sync retries until the push succeeds |
+| `lastProxyCheck` | object \| null | Last REAL server proxy check: `ip`, `country`, `countryCode`, `city`, `timezone`, `latencyMs`, `checkedAt` |
+
+`Store` also gains `folderServerIds` (object, local folder id → server
+folder id) so profile `folderIds` can be translated between the local and
+server id spaces during sync. The session token (`dl1.…`) lives in
+app-private SharedPreferences, never in `store.json`.
+
 ## Supporting objects (same store file on Android, `store.json`)
 
 - `Folder`: `{ id, name }`

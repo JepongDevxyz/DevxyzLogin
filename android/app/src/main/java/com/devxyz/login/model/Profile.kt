@@ -130,6 +130,27 @@ data class BrowserOptions(
     val allowInstallExtensions: Boolean = true
 )
 
+/**
+ * Result of a REAL server-side proxy check (POST /api/proxies/check) —
+ * measured exit data, never invented. Stored on the profile so the
+ * quick-settings sheet can show the resolved timezone / place for
+ * "Based on IP" rows (v4: closes the v3 residual). Client-local
+ * bookkeeping: stripped from sync uploads (see SyncEngine).
+ */
+@Serializable
+data class ProxyCheckInfo(
+    val ip: String = "",
+    val country: String = "",
+    val countryCode: String = "",
+    val city: String = "",
+    val timezone: String = "",
+    val latencyMs: Long = 0,
+    val checkedAt: String = ""
+) {
+    /** "City, Country" (either part may be blank). */
+    val place: String get() = listOf(city, country).filter { it.isNotBlank() }.joinToString(", ")
+}
+
 @Serializable
 data class Profile(
     val id: String,
@@ -152,7 +173,18 @@ data class Profile(
     val cookies: String = "",
     val createdAt: String = "",
     val updatedAt: String = "",
-    val deletedAt: String? = null
+    val deletedAt: String? = null,
+    /**
+     * v4 (additive, CLIENT-LOCAL sync bookkeeping — never sent to the
+     * server): the profile's id on the DevxyzLogin server once uploaded;
+     * null = not on the server yet. `dirty` = local edits not yet pushed.
+     * Sync uploads strip both fields (and [lastProxyCheck]) so the shared
+     * schema on the wire stays exactly SHARED_SCHEMA.md.
+     */
+    val serverId: String? = null,
+    val dirty: Boolean = false,
+    /** v4 (additive, client-local): last real proxy-check result. */
+    val lastProxyCheck: ProxyCheckInfo? = null
 )
 
 @Serializable
@@ -184,7 +216,13 @@ data class Store(
     val folders: List<Folder> = emptyList(),
     val workspaces: List<Workspace> = emptyList(),
     val proxies: List<SharedProxy> = emptyList(),
-    val members: List<String> = emptyList()
+    val members: List<String> = emptyList(),
+    /**
+     * v4 (additive, client-local): local folder id → server folder id,
+     * maintained by SyncEngine so profile folderIds can be translated
+     * between the local and server id spaces during sync.
+     */
+    val folderServerIds: Map<String, String> = emptyMap()
 )
 
 /** OS options shown in the Overview picker — exact GoLogin labels and order (capture §4.1). */

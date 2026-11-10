@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,6 +32,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,18 +49,27 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.devxyz.login.data.ApiResult
+import com.devxyz.login.data.ApiTokenMeta
+import com.devxyz.login.data.AuthSession
 import com.devxyz.login.data.ProfileStore
+import com.devxyz.login.data.ServerApi
+import kotlinx.coroutines.launch
 import com.devxyz.login.model.CaptureData
 import com.devxyz.login.model.Countries
 import com.devxyz.login.model.DefaultProfileSettings
@@ -508,6 +519,9 @@ fun SettingsSectionScreen(
     onThemeChange: (String) -> Unit,
     onLanguageChange: (String) -> Unit,
     onDefaultsChange: (DefaultProfileSettings) -> Unit,
+    /** v4: live server session (null = local mode) for the API tokens page. */
+    session: AuthSession?,
+    onRequireLogin: () -> Unit,
     onBack: () -> Unit
 ) {
     val title = when (section) {
@@ -542,7 +556,7 @@ fun SettingsSectionScreen(
                 "defaults" -> DefaultsSection(defaults, onDefaultsChange)
                 "affiliate" -> AffiliateSection()
                 "sessions" -> SessionsSection(sessions, onSessionsChange)
-                "api" -> ApiSection()
+                "api" -> ApiSection(session, onRequireLogin)
                 "vault" -> VaultSection()
                 "usage" -> UsageSection()
                 "members" -> MembersSection(store, accountEmail, onStoreChange)
@@ -929,28 +943,40 @@ private fun SessionsSection(
 }
 
 @Composable
-private fun ApiSection() {
+private fun ApiSection(session: AuthSession?, onRequireLogin: () -> Unit) {
     val context = LocalContext.current
-    val prefs = remember {
-        context.getSharedPreferences("devxyz_api", Context.MODE_PRIVATE)
-    }
-    var tokens by remember {
-        mutableStateOf(
-            (prefs.getString("tokens", "") ?: "")
-                .lines().filter { it.isNotBlank() }
-                .mapNotNull {
-                    val parts = it.split("|")
-                    if (parts.size == 3) Triple(parts[0], parts[1], parts[2]) else null
+    val clipboard = LocalClipboardManager.current
+    val api = remember { ServerApi() }
+    val scope = rememberCoroutineScope()
+
+    var tokens by remember { mutableStateOf<List<ApiTokenMeta>>(emptyList()) }
+    var loading by remember { mutableStateOf(false) }
+    var loadError by remember { mutableStateOf<String?>(null) }
+    var showCreate by remember { mutableStateOf(false) }
+    var newName by remember { mutableStateOf("") }
+    var creating by remember { mutableStateOf(false) }
+    var justCreatedRaw by remember { mutableStateOf<String?>(null) }
+
+    fun reload() {
+        val s = session ?: return
+        loading = true
+        loadError = null
+        scope.launch {
+            when (val r = api.listTokens(s.token, s.workspaceId)) {
+                is ApiResult.Success -> {
+                    tokens = r.data
+                    loading = false
                 }
-        )
+                is ApiResult.Failure -> {
+                    loadError = r.message
+                    loading = false
+                }
+            }
+        }
     }
-    fun persist(next: List<Triple<String, String, String>>) {
-        tokens = next
-        prefs.edit().putString(
-            "tokens",
-            next.joinToString("\n") { "${it.first}|${it.second}|${it.third}" }
-        ).apply()
-    }
+
+    LaunchedEffect(session?.token) { reload() }
+
     Text(
         "You can connect to API and integrate DevxyzLogin with other programs to, " +
             "for instance, automate some processes by using self-written bots. Keep in mind " +
@@ -977,32 +1003,140 @@ private fun ApiSection() {
         }
     }
     SectionTitle("Access tokens")
-    if (tokens.isEmpty()) Text("No tokens yet.")
-    tokens.forEachIndexed { index, (name, token, created) ->
+
+    if (session == null) {
+        // Tokens are account objects on the server — without an account
+        // there is nothing real to show, so explain instead of faking a list.
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    "API tokens live on your DevxyzLogin account and are managed on the server.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Log in to create and revoke tokens.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = onRequireLogin) { Text("Log in") }
+            }
+        }
+        return
+    }
+
+    if (loading) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            Spacer(Modifier.width(8.dp))
+            Text("Loading tokens…")
+        }
+    }
+    if (loadError != null) {
+        Text(loadError!!, color = MaterialTheme.colorScheme.error)
+        TextButton(onClick = { reload() }) { Text("Retry") }
+    }
+    if (!loading && tokens.isEmpty() && loadError == null) Text("No tokens yet.")
+    tokens.forEachIndexed { index, t ->
         Card(modifier = Modifier.fillMaxWidth()) {
             Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("${index + 1}. $name", style = MaterialTheme.typography.titleSmall)
+                    Text("${index + 1}. ${t.name}", style = MaterialTheme.typography.titleSmall)
                     Text(
-                        token.take(10) + "••••••••••" + token.takeLast(4),
+                        t.prefix + "••••••••••",
                         style = MaterialTheme.typography.bodySmall
                     )
-                    Text(created, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "Created ${t.createdAt.take(10)}" +
+                            (t.lastUsedAt?.let { " • Last used ${it.take(10)}" } ?: " • Never used"),
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
-                IconButton(onClick = { persist(tokens - tokens[index]) }) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Delete token")
+                IconButton(onClick = {
+                    scope.launch {
+                        when (val r = api.deleteToken(session.token, session.workspaceId, t.id)) {
+                            is ApiResult.Success -> {
+                                tokens = tokens - t
+                                Toast.makeText(context, "Token revoked", Toast.LENGTH_SHORT).show()
+                            }
+                            is ApiResult.Failure ->
+                                Toast.makeText(context, r.message, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }) {
+                    Icon(Icons.Filled.Delete, contentDescription = "Revoke token")
                 }
             }
         }
     }
     Button(onClick = {
-        val alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-        val raw = (1..40).map { alphabet[Random.nextInt(alphabet.length)] }.joinToString("")
-        val created = SimpleDateFormat("MMM d, yyyy", Locale.US).format(Date())
-        persist(tokens + Triple("Token ${tokens.size + 1}", "dl1_$raw", created))
+        newName = "Token ${tokens.size + 1}"
+        showCreate = true
     }) { Text("New Token") }
-}
 
+    if (showCreate) {
+        AlertDialog(
+            onDismissRequest = { if (!creating) showCreate = false },
+            title = { Text("New API token") },
+            text = {
+                OutlinedTextField(
+                    value = newName, onValueChange = { newName = it },
+                    label = { Text("Token name") }, singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !creating && newName.isNotBlank(),
+                    onClick = {
+                        creating = true
+                        scope.launch {
+                            when (val r = api.createToken(session.token, session.workspaceId, newName.trim())) {
+                                is ApiResult.Success -> {
+                                    creating = false
+                                    showCreate = false
+                                    justCreatedRaw = r.data.second
+                                    tokens = tokens + r.data.first
+                                }
+                                is ApiResult.Failure -> {
+                                    creating = false
+                                    Toast.makeText(context, r.message, Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }
+                    }
+                ) { Text(if (creating) "Creating…" else "Create") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCreate = false }, enabled = !creating) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (justCreatedRaw != null) {
+        val raw = justCreatedRaw!!
+        AlertDialog(
+            onDismissRequest = { justCreatedRaw = null },
+            title = { Text("Your new token") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Copy it now — for your safety it is shown only once and cannot be retrieved again.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(raw, style = MaterialTheme.typography.bodyMedium)
+                    OutlinedButton(onClick = {
+                        clipboard.setText(AnnotatedString(raw))
+                        Toast.makeText(context, "Token copied", Toast.LENGTH_SHORT).show()
+                    }) { Text("Copy token") }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { justCreatedRaw = null }) { Text("I saved it") }
+            }
+        )
+    }
+}
 @Composable
 private fun VaultSection() {
     val context = LocalContext.current

@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Login
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
@@ -42,6 +43,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +54,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.devxyz.login.browser.BrowserActivityBase
 import com.devxyz.login.data.ProfileStore
+import com.devxyz.login.data.ServerApi
+import com.devxyz.login.data.SessionStore
+import com.devxyz.login.data.SyncEngine
 import com.devxyz.login.model.DefaultBookmarks
 import com.devxyz.login.model.DefaultProfileSettings
 import com.devxyz.login.model.FingerprintGenerator
@@ -60,6 +65,7 @@ import com.devxyz.login.model.Store
 import com.devxyz.login.model.Workspace
 import com.devxyz.login.ui.DevxyzTheme
 import com.devxyz.login.ui.FoldersScreen
+import com.devxyz.login.ui.LoginScreen
 import com.devxyz.login.ui.ProfileEditScreen
 import com.devxyz.login.ui.ProfileListScreen
 import com.devxyz.login.ui.ProxiesScreen
@@ -99,7 +105,22 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
     var screen by remember { mutableStateOf<Screen>(Screen.List) }
 
     val prefs = remember { context.getSharedPreferences("devxyz_prefs", Context.MODE_PRIVATE) }
-    var accountEmail by remember { mutableStateOf(prefs.getString("email", "user@devxyzlogin.local") ?: "") }
+
+    // ---- v4: live server session + sync state ----
+    val sessionStore = remember { SessionStore(context) }
+    val api = remember { ServerApi() }
+    var session by remember { mutableStateOf(sessionStore.load()) }
+    var localChosen by remember { mutableStateOf(sessionStore.localModeChosen) }
+    var forceLogin by remember { mutableStateOf(false) }
+    var syncStatus by remember {
+        mutableStateOf(if (session != null) "Synced" else "Local mode")
+    }
+    var syncRunning by remember { mutableStateOf(false) }
+    var syncAgain by remember { mutableStateOf(false) }
+
+    var accountEmail by remember {
+        mutableStateOf(session?.email ?: (prefs.getString("email", "") ?: ""))
+    }
     var plan by remember { mutableStateOf(prefs.getString("plan", "Free") ?: "Free") }
     var themeMode by remember { mutableStateOf(prefs.getString("theme", "system") ?: "system") }
     var uiLanguage by remember { mutableStateOf(prefs.getString("ui_language", "en") ?: "en") }
@@ -128,9 +149,114 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var newWorkspaceName by remember { mutableStateOf("") }
 
-    fun updateStore(next: Store) {
-        store = next
-        profileStore.save(next)
+    /**
+     * Single write path for the store. On local (non-sync) writes, any
+     * profile that already lives on the server and whose content changed
+     * (ignoring per-device run status / timestamps) is marked dirty so
+     * the next sync PATCHes it — this one rule covers edits from the
+     * editor, quick settings, delete and restore alike. After a local
+     * write with sync work pending, a best-effort sync is scheduled.
+     */
+    fun updateStore(next: Store, fromSync: Boolean = false) {
+        val previous = store
+        var adjusted = next
+        if (!fromSync) {
+            val oldById = previous.profiles.associateBy { it.id }
+            adjusted = next.copy(profiles = next.profiles.map { p ->
+                val old = oldById[p.id]
+                if (old != null && p.serverId != null && !p.dirty &&
+                    old.copy(status = p.status, dirty = p.dirty, updatedAt = p.updatedAt) != p
+                ) p.copy(dirty = true) else p
+            })
+        }
+        store = adjusted
+        profileStore.save(adjusted)
+        if (!fromSync && session != null) {
+            val hasWork = adjusted.profiles.any {
+                it.dirty ||
+                    (it.serverId == null && it.deletedAt == null) ||
+                    (it.deletedAt != null && it.serverId != null)
+            } || adjusted.folders != previous.folders
+            if (hasWork) runSync()
+        }
+    }
+
+    /**
+     * Runs one sync pass (SyncEngine owns the merge rules). Best-effort:
+     * failures only flip the status line to "Sync pending" — dirty flags
+     * survive and the next launch/login/mutation retries. Profiles the
+     * user edited while a sync was in flight keep their newer local
+     * version; profiles/folders created meanwhile are preserved.
+     */
+    fun runSync() {
+        val s = session ?: return
+        if (syncRunning) {
+            syncAgain = true
+            return
+        }
+        syncRunning = true
+        syncStatus = "Syncing…"
+        val snapshot = store
+        scope.launch {
+            val report = try {
+                SyncEngine.synchronize(api, s, snapshot)
+            } catch (e: Exception) {
+                syncRunning = false
+                syncStatus = "Sync pending"
+                return@launch
+            }
+            val current = store
+            val resultById = report.store.profiles.associateBy { it.id }
+            val snapshotById = snapshot.profiles.associateBy { it.id }
+            val reconciled = current.profiles.map { cur ->
+                val res = resultById[cur.id] ?: return@map cur
+                val snap = snapshotById[cur.id]
+                if (snap != null && cur.updatedAt != snap.updatedAt) {
+                    // Edited mid-sync: keep the user's newer copy, adopt
+                    // the server id the sync may have just assigned.
+                    cur.copy(
+                        serverId = cur.serverId ?: res.serverId,
+                        dirty = if (res.serverId != null || cur.serverId != null) true else cur.dirty
+                    )
+                } else res
+            }
+            val extraFolders = current.folders.filter { cf ->
+                report.store.folders.none { it.id == cf.id }
+            }
+            val finalStore = report.store.copy(
+                profiles = reconciled,
+                folders = report.store.folders + extraFolders,
+                folderServerIds = report.store.folderServerIds +
+                    extraFolders.mapNotNull { f ->
+                        current.folderServerIds[f.id]?.let { f.id to it }
+                    }.toMap()
+            )
+            updateStore(finalStore, fromSync = true)
+            syncRunning = false
+            when {
+                report.authExpired -> {
+                    sessionStore.clear()
+                    session = null
+                    syncStatus = "Local mode"
+                    Toast.makeText(
+                        context,
+                        "Session expired — log in again to sync. Your profiles stay on this device.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                report.failures > 0 -> syncStatus = "Sync pending"
+                else -> syncStatus = "Synced"
+            }
+            if (syncAgain) {
+                syncAgain = false
+                runSync()
+            }
+        }
+    }
+
+    // Sync once on launch when a session exists.
+    LaunchedEffect(session?.token) {
+        if (session != null) runSync()
     }
 
     fun navigate(target: Screen) {
@@ -184,6 +310,31 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
     }
 
     DevxyzTheme(themeMode = themeMode) {
+    if (session == null && (forceLogin || !localChosen)) {
+        // v4: no session and local mode not chosen yet → the account gate
+        // comes first (the GoLogin Android app also opens on login).
+        LoginScreen(
+            onLoggedIn = { s ->
+                session = s
+                sessionStore.save(s)
+                forceLogin = false
+                accountEmail = s.email
+                syncStatus = "Syncing…"
+                Toast.makeText(
+                    context,
+                    "Signed in as ${s.email} — syncing your profiles",
+                    Toast.LENGTH_SHORT
+                ).show()
+                runSync()
+            },
+            onContinueLocal = {
+                sessionStore.localModeChosen = true
+                localChosen = true
+                forceLogin = false
+                syncStatus = "Local mode"
+            }
+        )
+    } else {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -213,7 +364,7 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
                                 style = MaterialTheme.typography.titleSmall
                             )
                             Text(
-                                accountEmail.ifBlank { "Not signed in" },
+                                session?.email ?: "Local mode",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -222,6 +373,15 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
                     Text(
                         "$plan · ${store.profiles.count { it.deletedAt == null }} profiles",
                         style = MaterialTheme.typography.bodySmall
+                    )
+                    // v4: honest sync state — "Synced" only after a clean
+                    // pass, "Sync pending" while dirty work is waiting,
+                    // "Local mode" when there is no account session.
+                    Text(
+                        if (session != null) "☁ $syncStatus"
+                        else "Local mode — profiles stay on this device",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 HorizontalDivider()
@@ -282,17 +442,29 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
                     selected = false,
                     onClick = { navigate(Screen.SettingsHub) }
                 )
-                NavigationDrawerItem(
-                    icon = {
-                        Icon(
-                            Icons.Filled.Logout, contentDescription = null,
-                            tint = com.devxyz.login.ui.DangerRed
-                        )
-                    },
-                    label = { Text("Log out", color = com.devxyz.login.ui.DangerRed) },
-                    selected = false,
-                    onClick = { showLogoutConfirm = true }
-                )
+                if (session != null) {
+                    NavigationDrawerItem(
+                        icon = {
+                            Icon(
+                                Icons.Filled.Logout, contentDescription = null,
+                                tint = com.devxyz.login.ui.DangerRed
+                            )
+                        },
+                        label = { Text("Log out", color = com.devxyz.login.ui.DangerRed) },
+                        selected = false,
+                        onClick = { showLogoutConfirm = true }
+                    )
+                } else {
+                    NavigationDrawerItem(
+                        icon = { Icon(Icons.Filled.Login, contentDescription = null) },
+                        label = { Text("Log in") },
+                        selected = false,
+                        onClick = {
+                            forceLogin = true
+                            scope.launch { drawerState.close() }
+                        }
+                    )
+                }
                 Spacer(Modifier.height(12.dp))
             }
         }
@@ -350,7 +522,8 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
                             }))
                             Toast.makeText(context, "Moved to trash — restore it in Settings → Restore profiles", Toast.LENGTH_SHORT).show()
                         },
-                        onNewProfile = { navigate(Screen.Edit(newProfile(), isNew = true)) }
+                        onNewProfile = { navigate(Screen.Edit(newProfile(), isNew = true)) },
+                        apiToken = session?.token
                     )
                     is Screen.Edit -> ProfileEditScreen(
                         initial = s.profile,
@@ -364,7 +537,9 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
                             )
                             screen = Screen.List
                         },
-                        onBack = { screen = Screen.List }
+                        onBack = { screen = Screen.List },
+                        apiToken = session?.token,
+                        apiWorkspaceId = session?.workspaceId
                     )
                     is Screen.Folders -> FoldersScreen(
                         store = store,
@@ -419,12 +594,15 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
                                 Json { ignoreUnknownKeys = true }.encodeToString(it)
                             ).apply()
                         },
+                        session = session,
+                        onRequireLogin = { forceLogin = true },
                         onBack = { screen = Screen.SettingsHub }
                     )
                 }
             }
         }
     }
+    } // else: signed in or local mode
 
     if (showAddWorkspace) {
         AlertDialog(
@@ -460,12 +638,19 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
             text = { Text("Log out of DevxyzLogin on this device? Your profiles stay stored locally.") },
             confirmButton = {
                 TextButton(onClick = {
+                    // v4: REAL logout — the server session token is
+                    // dropped; local profiles are never deleted.
+                    sessionStore.clear()
+                    session = null
+                    sessionStore.localModeChosen = true
+                    localChosen = true
+                    syncStatus = "Local mode"
                     accountEmail = ""
                     prefs.edit().remove("email").apply()
                     showLogoutConfirm = false
                     scope.launch { drawerState.close() }
                     screen = Screen.List
-                    Toast.makeText(context, "Logged out (local session cleared)", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Logged out — your profiles stay on this device", Toast.LENGTH_SHORT).show()
                 }) { Text("Log out") }
             },
             dismissButton = { TextButton(onClick = { showLogoutConfirm = false }) { Text("Cancel") } }

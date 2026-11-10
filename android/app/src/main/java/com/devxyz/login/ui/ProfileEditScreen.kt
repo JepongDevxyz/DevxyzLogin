@@ -46,6 +46,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,7 +55,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.devxyz.login.data.ApiResult
 import com.devxyz.login.data.ProfileStore
+import com.devxyz.login.data.ServerApi
 import com.devxyz.login.model.CaptureData
 import com.devxyz.login.model.Countries
 import com.devxyz.login.model.DefaultBookmarks
@@ -62,7 +65,10 @@ import com.devxyz.login.model.FingerprintGenerator
 import com.devxyz.login.model.Folder
 import com.devxyz.login.model.OsOptions
 import com.devxyz.login.model.Profile
+import com.devxyz.login.model.ProxyConfig
 import com.devxyz.login.model.SharedProxy
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.decodeFromJsonElement
 
 /**
  * Create/Edit profile — v3 layout follows the GoLogin ANDROID app
@@ -84,11 +90,69 @@ fun ProfileEditScreen(
     folders: List<Folder>,
     savedProxies: List<SharedProxy>,
     onSave: (Profile) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    /** v4: live server session for the REAL proxy check (null = local mode). */
+    apiToken: String? = null,
+    apiWorkspaceId: String? = null
 ) {
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
+    val api = remember { ServerApi() }
+    val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf(initial) }
+    // Real proxy-check state (POST /api/proxies/check via the server —
+    // the server requires auth, so checks need a logged-in session).
+    var checkingProxy by remember { mutableStateOf(false) }
+    var checkText by remember { mutableStateOf<String?>(null) }
+    var checkFailed by remember { mutableStateOf(false) }
+
+    fun toast(msg: String) {
+        android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
+    }
+
+    /** Applies a successful check: stores the measured result on the
+     *  profile (saved with it) and resolves the timezone when it is in
+     *  "Based on IP" mode. */
+    fun applyCheck(info: com.devxyz.login.model.ProxyCheckInfo) {
+        var next = profile.copy(lastProxyCheck = info)
+        if (next.fingerprint.timezone.auto && info.timezone.isNotBlank()) {
+            next = next.copy(
+                fingerprint = next.fingerprint.copy(
+                    timezone = next.fingerprint.timezone.copy(zone = info.timezone)
+                )
+            )
+        }
+        profile = next
+        checkFailed = false
+        checkText = "✓ ${info.ip} — ${info.place.ifBlank { "Unknown location" }} • " +
+            "${info.timezone} • ${info.latencyMs} ms"
+    }
+
+    fun runCheck(p: ProxyConfig) {
+        if (apiToken == null) {
+            toast("Log in to run a real proxy check — the DevxyzLogin server checks the proxy for you")
+            return
+        }
+        if (p.host.isBlank() || p.port <= 0) {
+            toast("Enter the proxy IP and port first")
+            return
+        }
+        checkingProxy = true
+        checkText = null
+        scope.launch {
+            when (val r = api.checkProxy(apiToken, p.type, p.host, p.port, p.username, p.password)) {
+                is ApiResult.Success -> {
+                    checkingProxy = false
+                    applyCheck(r.data)
+                }
+                is ApiResult.Failure -> {
+                    checkingProxy = false
+                    checkFailed = true
+                    checkText = "✗ ${r.message}"
+                }
+            }
+        }
+    }
     val fp = profile.fingerprint
     val nav = fp.navigator
     val hw = fp.hardware
@@ -304,13 +368,78 @@ fun ProfileEditScreen(
                                     )
                                 }
                             }
-                            OutlinedButton(onClick = {
-                                android.widget.Toast.makeText(
-                                    context,
-                                    "Built-in ${profile.proxy.buyType} proxy for ${Countries.nameOf(profile.proxy.buyCountry)} — the live check runs through the DevxyzLogin server",
-                                    android.widget.Toast.LENGTH_SHORT
-                                ).show()
-                            }) { Text("Check Proxy") }
+                            OutlinedButton(
+                                enabled = !checkingProxy,
+                                onClick = {
+                                    if (apiToken == null) {
+                                        toast("Log in to get a built-in proxy from the DevxyzLogin server")
+                                    } else {
+                                        checkingProxy = true
+                                        checkText = null
+                                        scope.launch {
+                                            val typeKey = when (profile.proxy.buyType) {
+                                                "Mobile" -> "mobile"
+                                                "Data Center" -> "datacenter"
+                                                else -> "residential"
+                                            }
+                                            when (val r = api.builtinProxy(
+                                                apiToken, apiWorkspaceId,
+                                                profile.proxy.buyCountry, typeKey
+                                            )) {
+                                                is ApiResult.Success -> {
+                                                    val proxyObj = r.data["proxy"]
+                                                    val decoded = try {
+                                                        proxyObj?.let {
+                                                            kotlinx.serialization.json.Json {
+                                                                ignoreUnknownKeys = true
+                                                            }.decodeFromJsonElement(
+                                                                ProxyConfig.serializer(), it
+                                                            )
+                                                        }
+                                                    } catch (e: Exception) { null }
+                                                    if (decoded == null || decoded.host.isBlank()) {
+                                                        checkingProxy = false
+                                                        checkFailed = true
+                                                        checkText = "✗ The server returned an unusable proxy"
+                                                    } else {
+                                                        val assigned = decoded.copy(mode = "custom")
+                                                        profile = profile.copy(proxy = assigned)
+                                                        // Now verify the assigned endpoint for real.
+                                                        when (val cr = api.checkProxy(
+                                                            apiToken, assigned.type, assigned.host,
+                                                            assigned.port, assigned.username, assigned.password
+                                                        )) {
+                                                            is ApiResult.Success -> {
+                                                                checkingProxy = false
+                                                                applyCheck(cr.data)
+                                                            }
+                                                            is ApiResult.Failure -> {
+                                                                checkingProxy = false
+                                                                checkFailed = true
+                                                                checkText = "Proxy assigned (${assigned.host}:${assigned.port}) but the check failed: ${cr.message}"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                is ApiResult.Failure -> {
+                                                    checkingProxy = false
+                                                    checkFailed = true
+                                                    checkText = if (r.httpCode == 501)
+                                                        "✗ No ${typeKey} provider is configured on the server yet — built-in proxies need a plugged-in supplier"
+                                                    else "✗ ${r.message}"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ) { Text(if (checkingProxy) "Checking…" else "Check Proxy") }
+                            if (checkText != null) {
+                                Text(
+                                    checkText!!,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (checkFailed) MaterialTheme.colorScheme.error else BrandTeal
+                                )
+                            }
                             Text(
                                 "Built-in proxies are assigned by the DevxyzLogin server; country defaults to France (GoLogin parity). Use \"Your proxy\" for a proxy you already own.",
                                 style = MaterialTheme.typography.bodySmall
@@ -379,16 +508,23 @@ fun ProfileEditScreen(
                             "Note: Android WebView applies HTTP/HTTPS proxies only; SOCKS and proxy authentication cannot be applied (you'll be told at launch).",
                             style = MaterialTheme.typography.bodySmall
                         )
-                        OutlinedButton(onClick = {
-                            val p = profile.proxy
-                            android.widget.Toast.makeText(
-                                context,
-                                if (p.host.isNotBlank() && p.port > 0)
-                                    "Proxy fields look valid — the live check runs through the DevxyzLogin server"
-                                else "Enter the proxy IP and port first",
-                                android.widget.Toast.LENGTH_SHORT
-                            ).show()
-                        }) { Text("Check Proxy") }
+                        OutlinedButton(
+                            enabled = !checkingProxy,
+                            onClick = { runCheck(profile.proxy) }
+                        ) { Text(if (checkingProxy) "Checking…" else "Check Proxy") }
+                        if (checkText != null) {
+                            Text(
+                                checkText!!,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (checkFailed) MaterialTheme.colorScheme.error else BrandTeal
+                            )
+                        }
+                        if (apiToken == null) {
+                            Text(
+                                "Proxy checks run on the DevxyzLogin server — log in to check this proxy for real.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                     }
                     else -> {
                         Text(
