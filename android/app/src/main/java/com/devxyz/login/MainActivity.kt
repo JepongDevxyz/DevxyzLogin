@@ -157,6 +157,11 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
      * user edited while a sync was in flight keep their newer local
      * version; profiles/folders created meanwhile are preserved.
      */
+    // Forward-reference bridge: runSync (above updateStore) applies merged
+    // results through updateStore; Kotlin local funs cannot mutually
+    // reference, so runSync calls this holder, bound after updateStore.
+    var updateStoreFn: (Store, Boolean) -> Unit = { _, _ -> }
+
     fun runSync() {
         val s = session ?: return
         if (syncRunning) {
@@ -200,7 +205,7 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
                         current.folderServerIds[f.id]?.let { f.id to it }
                     }.toMap()
             )
-            updateStore(finalStore, fromSync = true)
+            updateStoreFn(finalStore, true)
             syncRunning = false
             when {
                 report.authExpired -> {
@@ -259,6 +264,8 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
     LaunchedEffect(session?.token) {
         if (session != null) runSync()
     }
+
+    updateStoreFn = { next, fromSync -> updateStore(next, fromSync) }
 
     fun navigate(target: Screen) {
         screen = target
