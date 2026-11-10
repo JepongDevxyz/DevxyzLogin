@@ -149,3 +149,11 @@ API — the route surface above is designed so only `store.js` would change.
 | `api/index.js` | Vercel entry — re-exports `app.js` |
 | `test.sh` | End-to-end curl test suite (95 assertions) |
 | `test/miniproxy.js` | Test-only mini HTTP/SOCKS5 proxies + ip-api stub |
+
+## Live deployment
+
+Deployed on Vercel (project `devxyzlogin-server`, git-linked to the DevxyzLogin repo, root directory `server/`):
+
+- Base URL: https://devxyzlogin-server.vercel.app
+- Health: GET /api/health
+- Env vars set on the project: TOKEN_SECRET, DATA_FILE=/tmp/devxyzlogin-data.json
