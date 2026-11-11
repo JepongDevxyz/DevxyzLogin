@@ -214,13 +214,16 @@ fun ProxiesScreen(
     var password by remember { mutableStateOf("") }
 
     fun buyPlaceholder(kind: String) {
-        val entry = SharedProxy(
-            id = ProfileStore.newId(),
-            name = "$kind (pending checkout)",
-            proxy = ProxyConfig(mode = "devxyz", type = "http", host = "geo.devxyzlogin.local", port = 10080)
-        )
-        onStoreChange(store.copy(proxies = store.proxies + entry))
-        Toast.makeText(context, "$kind proxy reserved — checkout runs through the DevxyzLogin server", Toast.LENGTH_SHORT).show()
+        // v2.3.1: no residential provider is configured on the server yet,
+        // so there is nothing real to reserve. NEVER write a placeholder
+        // proxy entry (builds ≤ 2.3.0 added one pointing at a fake demo
+        // host, which then killed every page at run time) — say so honestly
+        // and leave the proxy list untouched.
+        Toast.makeText(
+            context,
+            "No ${kind.lowercase()} provider is configured on the DevxyzLogin server yet — built-in proxies need a plugged-in supplier",
+            Toast.LENGTH_LONG
+        ).show()
     }
 
     Scaffold(topBar = { SimpleTopBar("Proxies", onBack) }) { padding ->
