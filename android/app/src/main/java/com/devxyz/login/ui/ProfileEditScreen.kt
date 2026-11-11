@@ -655,22 +655,20 @@ fun ProfileEditScreen(
                     minLines = 2,
                     shape = RoundedCornerShape(10.dp),
                     colors = fieldBoxColors(),
-                    contentPadding = PaddingValues(
-                        start = 12.dp, end = 48.dp, top = 12.dp, bottom = 12.dp
-                    )
+                    trailingIcon = {
+                        IconButton(
+                            onClick = {
+                                clipboard.setText(AnnotatedString(nav.userAgent))
+                                android.widget.Toast.makeText(context, "User-Agent copied", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        ) {
+                            Icon(
+                                Icons.Filled.ContentCopy, contentDescription = "Copy User-Agent",
+                                tint = BrandGreen, modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 )
-                IconButton(
-                    onClick = {
-                        clipboard.setText(AnnotatedString(nav.userAgent))
-                        android.widget.Toast.makeText(context, "User-Agent copied", android.widget.Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier.align(Alignment.TopEnd)
-                ) {
-                    Icon(
-                        Icons.Filled.ContentCopy, contentDescription = "Copy User-Agent",
-                        tint = BrandGreen, modifier = Modifier.size(20.dp)
-                    )
-                }
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
