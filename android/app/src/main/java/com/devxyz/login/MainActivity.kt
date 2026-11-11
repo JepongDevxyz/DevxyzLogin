@@ -6,38 +6,40 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Login
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Monitor
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Support
 import androidx.compose.material.icons.filled.Upgrade
 import androidx.compose.material.icons.filled.Workspaces
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,9 +47,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.devxyz.login.browser.BrowserActivityBase
 import com.devxyz.login.data.ProfileStore
 import com.devxyz.login.data.ServerApi
@@ -56,17 +64,28 @@ import com.devxyz.login.data.SyncEngine
 import com.devxyz.login.model.DefaultBookmarks
 import com.devxyz.login.model.DefaultProfileSettings
 import com.devxyz.login.model.FingerprintGenerator
+import com.devxyz.login.model.Folder
 import com.devxyz.login.model.Profile
+import com.devxyz.login.model.ProfileNames
 import com.devxyz.login.model.Store
 import com.devxyz.login.model.Workspace
+import com.devxyz.login.ui.AddProfileSheet
+import com.devxyz.login.ui.AddProxyScreen
+import com.devxyz.login.ui.AppBottomSheet
+import com.devxyz.login.ui.BrandGreen
+import com.devxyz.login.ui.ConfirmSheet
+import com.devxyz.login.ui.DangerRed
 import com.devxyz.login.ui.DevxyzTheme
 import com.devxyz.login.ui.FoldersScreen
+import com.devxyz.login.ui.GreenButton
 import com.devxyz.login.ui.LoginScreen
 import com.devxyz.login.ui.ProfileEditScreen
 import com.devxyz.login.ui.ProfileListScreen
 import com.devxyz.login.ui.ProxiesScreen
 import com.devxyz.login.ui.SettingsHubScreen
 import com.devxyz.login.ui.SettingsSectionScreen
+import com.devxyz.login.ui.SheetTitle
+import com.devxyz.login.ui.SpecTextField
 import com.devxyz.login.ui.SupportScreen
 import kotlinx.coroutines.launch
 import kotlinx.serialization.decodeFromString
@@ -139,11 +158,18 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
         )
     }
 
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var showAddWorkspace by remember { mutableStateOf(false) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var newWorkspaceName by remember { mutableStateOf("") }
+
+    // ---- v2.4.0 shell state: account sheet, add-profile sheet flow,
+    // hoisted pin set (shared by the list rows and the editor header) ----
+    var showAccountSheet by remember { mutableStateOf(false) }
+    var pinnedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var addDraft by remember { mutableStateOf<Profile?>(null) }
+    var showAddSheet by remember { mutableStateOf(false) }
+    var showAddProxy by remember { mutableStateOf(false) }
 
 
     /**
@@ -265,7 +291,6 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
 
     fun navigate(target: Screen) {
         screen = target
-        scope.launch { drawerState.close() }
     }
 
     fun newProfile(): Profile {
@@ -310,6 +335,30 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
         BrowserActivityBase.stopSlot(context, profileStore.slotFor(profile.id))
     }
 
+    fun deleteProfile(p: Profile) {
+        if (p.status == "running") stopProfile(p)
+        updateStore(store.copy(profiles = store.profiles.map {
+            if (it.id == p.id) it.copy(
+                status = "ready",
+                deletedAt = ProfileStore.nowIso(),
+                updatedAt = ProfileStore.nowIso()
+            ) else it
+        }))
+        Toast.makeText(context, "Moved to trash — restore it in Settings → Restore profiles", Toast.LENGTH_SHORT).show()
+    }
+
+    fun togglePin(p: Profile) {
+        pinnedIds = if (p.id in pinnedIds) pinnedIds - p.id else pinnedIds + p.id
+    }
+
+    fun openAddSheet() {
+        // Spec v2: the Add profile sheet pre-fills a generated
+        // word-word name ("rapid-unit"); the draft lives here so the
+        // Add proxy flow can write its result back into it.
+        addDraft = newProfile().copy(name = ProfileNames.random())
+        showAddSheet = true
+    }
+
     DevxyzTheme(themeMode = themeMode) {
     if (session == null && (forceLogin || !localChosen)) {
         // v4: no session and local mode not chosen yet → the account gate
@@ -336,152 +385,26 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
             }
         )
     } else {
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet {
-                // Account header: green square avatar + workspace name
-                // (GoLogin workspace-switcher parity, capture §7)
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(9.dp))
-                                .background(com.devxyz.login.ui.BrandGreen),
-                            contentAlignment = androidx.compose.ui.Alignment.Center
-                        ) {
-                            Text(
-                                (store.workspaces.firstOrNull()?.name ?: "D")
-                                    .firstOrNull()?.uppercase() ?: "D",
-                                color = androidx.compose.ui.graphics.Color.White,
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        }
-                        Spacer(Modifier.padding(6.dp))
-                        Column {
-                            Text(
-                                store.workspaces.firstOrNull()?.name ?: "My workspace",
-                                style = MaterialTheme.typography.titleSmall
-                            )
-                            Text(
-                                session?.email ?: "Local mode",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "$plan · ${store.profiles.count { it.deletedAt == null }} profiles",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    // v4: honest sync state — "Synced" only after a clean
-                    // pass, "Sync pending" while dirty work is waiting,
-                    // "Local mode" when there is no account session.
-                    Text(
-                        if (session != null) "☁ $syncStatus"
-                        else "Local mode — profiles stay on this device",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                HorizontalDivider()
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Filled.Upgrade, contentDescription = null) },
-                    label = { Text("Change plan") },
-                    selected = false,
-                    onClick = { navigate(Screen.SettingsSection("billing")) }
-                )
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Filled.ShoppingCart, contentDescription = null) },
-                    label = { Text("Buy proxy") },
-                    selected = false,
-                    onClick = { navigate(Screen.Proxies) }
-                )
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                    label = { Text("New profile") },
-                    selected = false,
-                    onClick = { navigate(Screen.Edit(newProfile(), isNew = true)) }
-                )
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Filled.Folder, contentDescription = null) },
-                    label = { Text("Folders manager") },
-                    selected = false,
-                    onClick = { navigate(Screen.Folders) }
-                )
-                HorizontalDivider()
-                Text("Workspaces", style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(start = 16.dp, top = 10.dp, bottom = 4.dp))
-                store.workspaces.forEach { ws: Workspace ->
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Filled.Workspaces, contentDescription = null) },
-                        label = { Text(ws.name) },
-                        selected = false,
-                        onClick = {
-                            Toast.makeText(context, "Workspace: ${ws.name} (active)", Toast.LENGTH_SHORT).show()
-                            scope.launch { drawerState.close() }
-                        }
-                    )
-                }
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                    label = { Text("Add workspace") },
-                    selected = false,
-                    onClick = { showAddWorkspace = true }
-                )
-                HorizontalDivider()
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Filled.Support, contentDescription = null) },
-                    label = { Text("Support") },
-                    selected = false,
-                    onClick = { navigate(Screen.Support) }
-                )
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
-                    label = { Text("Settings") },
-                    selected = false,
-                    onClick = { navigate(Screen.SettingsHub) }
-                )
-                if (session != null) {
-                    NavigationDrawerItem(
-                        icon = {
-                            Icon(
-                                Icons.Filled.Logout, contentDescription = null,
-                                tint = com.devxyz.login.ui.DangerRed
-                            )
-                        },
-                        label = { Text("Log out", color = com.devxyz.login.ui.DangerRed) },
-                        selected = false,
-                        onClick = { showLogoutConfirm = true }
-                    )
-                } else {
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Filled.Login, contentDescription = null) },
-                        label = { Text("Log in") },
-                        selected = false,
-                        onClick = {
-                            forceLogin = true
-                            scope.launch { drawerState.close() }
-                        }
-                    )
-                }
-                Spacer(Modifier.height(12.dp))
-            }
-        }
-    ) {
-        // v2.3.0: NO TopAppBar anywhere — the real GoLogin Android app
-        // has no app-title bar; on the list screen the burger sits in
-        // the same row as the search field (inside ProfileListScreen,
-        // fed by onOpenDrawer below).
+    Box(modifier = Modifier.fillMaxSize()) {
         Scaffold { padding ->
             Column(modifier = Modifier.padding(padding)) {
                 when (val s = screen) {
                     is Screen.List -> ProfileListScreen(
                         profiles = store.profiles,
                         folders = store.folders,
-                        onOpenDrawer = { scope.launch { drawerState.open() } },
-                        onRunMode = { p, api -> runProfile(p, api) },
+                        accountName = session?.workspaceName
+                            ?: store.workspaces.firstOrNull()?.name ?: "My workspace",
+                        connectionText = when {
+                            session == null -> "Local mode"
+                            syncStatus == "Synced" -> "Connected"
+                            else -> syncStatus
+                        },
+                        plan = plan,
+                        pinnedIds = pinnedIds,
+                        onTogglePin = { togglePin(it) },
+                        onOpenAccount = { showAccountSheet = true },
+                        onChoosePlan = { navigate(Screen.SettingsSection("billing")) },
+                        onRunMode = { p, apiMode -> runProfile(p, apiMode) },
                         onStop = { stopProfile(it) },
                         onUpdate = { updated ->
                             updateStore(store.copy(profiles = store.profiles.map {
@@ -499,18 +422,8 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
                             )
                             updateStore(store.copy(profiles = store.profiles + copy))
                         },
-                        onDelete = { p ->
-                            if (p.status == "running") stopProfile(p)
-                            updateStore(store.copy(profiles = store.profiles.map {
-                                if (it.id == p.id) it.copy(
-                                    status = "ready",
-                                    deletedAt = ProfileStore.nowIso(),
-                                    updatedAt = ProfileStore.nowIso()
-                                ) else it
-                            }))
-                            Toast.makeText(context, "Moved to trash — restore it in Settings → Restore profiles", Toast.LENGTH_SHORT).show()
-                        },
-                        onNewProfile = { navigate(Screen.Edit(newProfile(), isNew = true)) },
+                        onDelete = { deleteProfile(it) },
+                        onNewProfile = { openAddSheet() },
                         apiToken = session?.token
                     )
                     is Screen.Edit -> ProfileEditScreen(
@@ -526,6 +439,15 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
                             screen = Screen.List
                         },
                         onBack = { screen = Screen.List },
+                        onDelete = { deleteProfile(it) },
+                        pinned = s.profile.id in pinnedIds,
+                        onTogglePin = { togglePin(s.profile) },
+                        onCreateFolder = { name ->
+                            updateStore(store.copy(
+                                folders = store.folders + Folder(ProfileStore.newId(), name)
+                            ))
+                        },
+                        onBuyProxy = { navigate(Screen.Proxies) },
                         apiToken = session?.token,
                         apiWorkspaceId = session?.workspaceId
                     )
@@ -589,60 +511,391 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
                 }
             }
         }
+
+        // v2.4.0: floating bottom bar on the three tab roots — a white
+        // pill with Profiles / Proxies / Settings plus a separate
+        // solid-green "+ Add profile" pill (spec v2).
+        if (screen is Screen.List || screen is Screen.Proxies || screen is Screen.SettingsHub) {
+            BottomNavBar(
+                current = screen,
+                onSelect = { navigate(it) },
+                onAddProfile = { openAddSheet() },
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
+        }
     }
     } // else: signed in or local mode
 
-    if (showAddWorkspace) {
-        AlertDialog(
-            onDismissRequest = { showAddWorkspace = false },
-            title = { Text("Add workspace") },
-            text = {
-                OutlinedTextField(
-                    value = newWorkspaceName,
-                    onValueChange = { newWorkspaceName = it },
-                    label = { Text("Workspace name") },
-                    singleLine = true
-                )
+    if (showAccountSheet) {
+        AccountSheet(
+            workspaceName = store.workspaces.firstOrNull()?.name ?: "My workspace",
+            email = session?.email,
+            plan = plan,
+            profileCount = store.profiles.count { it.deletedAt == null },
+            syncText = if (session != null) "☁ $syncStatus"
+            else "Local mode — profiles stay on this device",
+            workspaces = store.workspaces,
+            loggedIn = session != null,
+            onNavigate = { target ->
+                showAccountSheet = false
+                navigate(target)
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (newWorkspaceName.isNotBlank()) {
+            onNewProfile = {
+                showAccountSheet = false
+                navigate(Screen.Edit(newProfile(), isNew = true))
+            },
+            onAddWorkspace = {
+                showAccountSheet = false
+                showAddWorkspace = true
+            },
+            onWorkspaceClick = { ws ->
+                Toast.makeText(context, "Workspace: ${ws.name} (active)", Toast.LENGTH_SHORT).show()
+                showAccountSheet = false
+            },
+            onLogout = {
+                showAccountSheet = false
+                showLogoutConfirm = true
+            },
+            onLogin = {
+                showAccountSheet = false
+                forceLogin = true
+            },
+            onDismiss = { showAccountSheet = false }
+        )
+    }
+
+    if (showAddSheet && addDraft != null) {
+        AddProfileSheet(
+            draft = addDraft!!,
+            folders = store.folders,
+            onDraftChange = { addDraft = it },
+            onConnectProxy = {
+                // The Add proxy flow is a full screen in this window —
+                // the sheet steps aside and returns with the result.
+                showAddSheet = false
+                showAddProxy = true
+            },
+            onExtendedSettings = {
+                val d = addDraft!!
+                showAddSheet = false
+                addDraft = null
+                navigate(Screen.Edit(d, isNew = true))
+            },
+            onCreate = {
+                val d = addDraft!!
+                showAddSheet = false
+                addDraft = null
+                updateStore(store.copy(
+                    profiles = store.profiles + d.copy(updatedAt = ProfileStore.nowIso())
+                ))
+                screen = Screen.List
+            },
+            onCreateFolder = { name ->
+                updateStore(store.copy(
+                    folders = store.folders + Folder(ProfileStore.newId(), name)
+                ))
+            },
+            onDismiss = {
+                showAddSheet = false
+                addDraft = null
+            }
+        )
+    }
+
+    if (showAddProxy) {
+        AddProxyScreen(
+            savedProxies = store.proxies,
+            apiToken = session?.token,
+            apiWorkspaceId = session?.workspaceId,
+            onBuyProxy = {
+                showAddProxy = false
+                addDraft = null
+                navigate(Screen.Proxies)
+            },
+            onConfirm = { cfg, info ->
+                showAddProxy = false
+                addDraft = addDraft?.let { d ->
+                    var next = d.copy(proxy = cfg)
+                    if (info != null) {
+                        next = next.copy(lastProxyCheck = info)
+                        if (next.fingerprint.timezone.auto && info.timezone.isNotBlank()) {
+                            next = next.copy(
+                                fingerprint = next.fingerprint.copy(
+                                    timezone = next.fingerprint.timezone.copy(zone = info.timezone)
+                                )
+                            )
+                        }
+                    }
+                    next
+                }
+                if (addDraft != null) showAddSheet = true
+            },
+            onBack = {
+                showAddProxy = false
+                if (addDraft != null) showAddSheet = true
+            }
+        )
+    }
+
+    if (showAddWorkspace) {
+        AppBottomSheet(onDismiss = { showAddWorkspace = false }) {
+            Column(modifier = Modifier.padding(bottom = 10.dp)) {
+                SheetTitle("Add workspace")
+                Spacer(Modifier.height(8.dp))
+                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    SpecTextField(
+                        label = "Workspace name",
+                        value = newWorkspaceName,
+                        onValueChange = { newWorkspaceName = it },
+                        clearable = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                GreenButton(
+                    text = "Add",
+                    enabled = newWorkspaceName.isNotBlank(),
+                    onClick = {
                         updateStore(store.copy(
                             workspaces = store.workspaces + Workspace(ProfileStore.newId(), newWorkspaceName.trim())
                         ))
                         newWorkspaceName = ""
+                        showAddWorkspace = false
                     }
-                    showAddWorkspace = false
-                }) { Text("Add") }
-            },
-            dismissButton = { TextButton(onClick = { showAddWorkspace = false }) { Text("Cancel") } }
-        )
+                )
+            }
+        }
     }
 
     if (showLogoutConfirm) {
-        AlertDialog(
-            onDismissRequest = { showLogoutConfirm = false },
-            title = { Text("Log out") },
-            text = { Text("Log out of DevxyzLogin on this device? Your profiles stay stored locally.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    // v4: REAL logout — the server session token is
-                    // dropped; local profiles are never deleted.
-                    sessionStore.clear()
-                    session = null
-                    sessionStore.localModeChosen = true
-                    localChosen = true
-                    syncStatus = "Local mode"
-                    accountEmail = ""
-                    prefs.edit().remove("email").apply()
-                    showLogoutConfirm = false
-                    scope.launch { drawerState.close() }
-                    screen = Screen.List
-                    Toast.makeText(context, "Logged out — your profiles stay on this device", Toast.LENGTH_SHORT).show()
-                }) { Text("Log out") }
+        ConfirmSheet(
+            title = "Log out",
+            message = "Log out of DevxyzLogin on this device? Your profiles stay stored locally.",
+            confirmLabel = "Log out",
+            onConfirm = {
+                // v4: REAL logout — the server session token is
+                // dropped; local profiles are never deleted.
+                sessionStore.clear()
+                session = null
+                sessionStore.localModeChosen = true
+                localChosen = true
+                syncStatus = "Local mode"
+                accountEmail = ""
+                prefs.edit().remove("email").apply()
+                showLogoutConfirm = false
+                screen = Screen.List
+                Toast.makeText(context, "Logged out — your profiles stay on this device", Toast.LENGTH_SHORT).show()
             },
-            dismissButton = { TextButton(onClick = { showLogoutConfirm = false }) { Text("Cancel") } }
+            onDismiss = { showLogoutConfirm = false }
         )
     }
+    }
+}
+
+/**
+ * Floating bottom navigation (spec v2): a white pill (rounded 28dp,
+ * shadow) with Profiles / Proxies / Settings tabs — active tab green
+ * — and a separate solid-green "+ Add profile" pill beside it.
+ */
+@Composable
+private fun BottomNavBar(
+    current: Screen,
+    onSelect: (Screen) -> Unit,
+    onAddProfile: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 8.dp,
+            modifier = Modifier.weight(1f)
+        ) {
+            Row {
+                BottomNavTab(
+                    label = "Profiles",
+                    icon = Icons.Filled.Person,
+                    selected = current is Screen.List,
+                    modifier = Modifier.weight(1f)
+                ) { onSelect(Screen.List) }
+                BottomNavTab(
+                    label = "Proxies",
+                    icon = Icons.Filled.Monitor,
+                    selected = current is Screen.Proxies,
+                    modifier = Modifier.weight(1f)
+                ) { onSelect(Screen.Proxies) }
+                BottomNavTab(
+                    label = "Settings",
+                    icon = Icons.Filled.Settings,
+                    selected = current is Screen.SettingsHub,
+                    modifier = Modifier.weight(1f)
+                ) { onSelect(Screen.SettingsHub) }
+            }
+        }
+        Spacer(Modifier.width(10.dp))
+        Button(
+            onClick = onAddProfile,
+            shape = RoundedCornerShape(28.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = BrandGreen,
+                contentColor = Color.White
+            ),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 2.dp),
+            modifier = Modifier.height(58.dp)
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Text("Add profile", style = TextStyle(fontSize = 13.sp), maxLines = 1)
+            }
+        }
+    }
+}
+
+@Composable
+private fun BottomNavTab(
+    label: String,
+    icon: ImageVector,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val tint = if (selected) BrandGreen else MaterialTheme.colorScheme.onSurfaceVariant
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+            .clip(RoundedCornerShape(28.dp))
+            .clickable { onClick() }
+            .padding(vertical = 8.dp)
+    ) {
+        Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(22.dp))
+        Text(label, style = TextStyle(fontSize = 12.sp), color = tint)
+    }
+}
+
+/**
+ * Account / workspace sheet (spec v2: the account menu is an avatar
+ * bottom sheet, not a side drawer) — the same content and actions
+ * the old drawer carried: plan, sync state, workspaces, support,
+ * settings, log out / log in.
+ */
+@Composable
+private fun AccountSheet(
+    workspaceName: String,
+    email: String?,
+    plan: String,
+    profileCount: Int,
+    syncText: String,
+    workspaces: List<Workspace>,
+    loggedIn: Boolean,
+    onNavigate: (Screen) -> Unit,
+    onNewProfile: () -> Unit,
+    onAddWorkspace: () -> Unit,
+    onWorkspaceClick: (Workspace) -> Unit,
+    onLogout: () -> Unit,
+    onLogin: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AppBottomSheet(onDismiss = onDismiss) {
+        Column(modifier = Modifier.padding(bottom = 16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(BrandGreen),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        workspaceName.firstOrNull()?.uppercase() ?: "D",
+                        color = Color.White,
+                        style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                Column {
+                    Text(
+                        workspaceName,
+                        style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    )
+                    Text(
+                        email ?: "Local mode",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                Text(
+                    "$plan · $profileCount profiles",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                // v4: honest sync state — "Synced" only after a clean
+                // pass, "Sync pending" while dirty work is waiting,
+                // "Local mode" when there is no account session.
+                Text(
+                    syncText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            AccountRow(Icons.Filled.Upgrade, "Change plan") {
+                onNavigate(Screen.SettingsSection("billing"))
+            }
+            AccountRow(Icons.Filled.ShoppingCart, "Buy proxy") {
+                onNavigate(Screen.Proxies)
+            }
+            AccountRow(Icons.Filled.Add, "New profile") { onNewProfile() }
+            AccountRow(Icons.Filled.Folder, "Folders manager") {
+                onNavigate(Screen.Folders)
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Text(
+                "Workspaces",
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(start = 16.dp, top = 10.dp, bottom = 2.dp)
+            )
+            workspaces.forEach { ws ->
+                AccountRow(Icons.Filled.Workspaces, ws.name) { onWorkspaceClick(ws) }
+            }
+            AccountRow(Icons.Filled.Add, "Add workspace") { onAddWorkspace() }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            AccountRow(Icons.Filled.Support, "Support") { onNavigate(Screen.Support) }
+            AccountRow(Icons.Filled.Settings, "Settings") { onNavigate(Screen.SettingsHub) }
+            if (loggedIn) {
+                AccountRow(Icons.Filled.Logout, "Log out", danger = true) { onLogout() }
+            } else {
+                AccountRow(Icons.Filled.Login, "Log in") { onLogin() }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccountRow(
+    icon: ImageVector,
+    label: String,
+    danger: Boolean = false,
+    onClick: () -> Unit
+) {
+    val color = if (danger) DangerRed else MaterialTheme.colorScheme.onSurface
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 13.dp)
+    ) {
+        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(14.dp))
+        Text(label, style = TextStyle(fontSize = 16.sp), color = color)
     }
 }
