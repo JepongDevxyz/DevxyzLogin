@@ -16,10 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Login
 import androidx.compose.material.icons.filled.Logout
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -31,7 +29,6 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -40,7 +37,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -355,7 +351,7 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(androidx.compose.foundation.shape.RoundedCornerShape(9.dp))
-                                .background(com.devxyz.login.ui.BrandTeal),
+                                .background(com.devxyz.login.ui.BrandGreen),
                             contentAlignment = androidx.compose.ui.Alignment.Center
                         ) {
                             Text(
@@ -477,30 +473,17 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
             }
         }
     ) {
-        Scaffold(
-            topBar = {
-                if (screen is Screen.List) {
-                    TopAppBar(
-                        title = { Text("DevxyzLogin") },
-                        navigationIcon = {
-                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                Icon(Icons.Filled.Menu, contentDescription = "Menu")
-                            }
-                        },
-                        actions = {
-                            IconButton(onClick = { navigate(Screen.Proxies) }) {
-                                Icon(Icons.Filled.Language, contentDescription = "Proxies")
-                            }
-                        }
-                    )
-                }
-            }
-        ) { padding ->
+        // v2.3.0: NO TopAppBar anywhere — the real GoLogin Android app
+        // has no app-title bar; on the list screen the burger sits in
+        // the same row as the search field (inside ProfileListScreen,
+        // fed by onOpenDrawer below).
+        Scaffold { padding ->
             Column(modifier = Modifier.padding(padding)) {
                 when (val s = screen) {
                     is Screen.List -> ProfileListScreen(
                         profiles = store.profiles,
                         folders = store.folders,
+                        onOpenDrawer = { scope.launch { drawerState.open() } },
                         onRunMode = { p, api -> runProfile(p, api) },
                         onStop = { stopProfile(it) },
                         onUpdate = { updated ->

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- White monochrome variant of the DevxyzLogin "D-radar" logo mark,
+     redrawn as a vector from the measured launcher-foreground glyph
+     (bar + three concentric right arcs + center dot) for the splash.
+     Geometry: 108x108 viewport; arcs are right-half ellipses centered
+     on the dot (60.4, 54), vertical radii = horizontal x 1.145. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="90dp"
+    android:height="90dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- left bar -->
+    <path
+        android:pathData="M18.75,20.25 h10.25 v67.25 h-10.25 z"
+        android:fillColor="#FFFFFF" />
+    <!-- outer D band -->
+    <path
+        android:pathData="M60.4,29.8 A21.1,24.2 0 0 1 60.4,78.2"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="9.5" />
+    <!-- middle arc -->
+    <path
+        android:pathData="M60.4,39.9 A12.35,14.1 0 0 1 60.4,68.1"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3" />
+    <!-- inner arc -->
+    <path
+        android:pathData="M60.4,45.9 A7.1,8.1 0 0 1 60.4,62.1"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3" />
+    <!-- center dot -->
+    <path
+        android:pathData="M57.4,54 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0"
+        android:fillColor="#FFFFFF" />
+</vector>

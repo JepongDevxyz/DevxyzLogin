@@ -6,10 +6,11 @@ import android.os.Bundle
 
 /**
  * Branded launch entry point. The activity theme
- * (@style/Theme.DevxyzLogin.Splash) paints the dark branded splash —
- * app icon centered on #191A24 — as the window background from the very
- * first frame, so there is no white flash. We hand off to MainActivity
- * immediately (first frame), then finish so Back never returns here.
+ * (@style/Theme.DevxyzLogin.Splash) paints the branded splash — white
+ * logo mark centered on a green gradient — as the window background
+ * from the very first frame, so there is no white flash. We hand off
+ * to MainActivity immediately (first frame), then finish so Back never
+ * returns here.
  */
 class SplashActivity : Activity() {
 

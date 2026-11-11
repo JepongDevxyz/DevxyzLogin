@@ -115,7 +115,7 @@ fun LoginScreen(
             modifier = Modifier
                 .size(56.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(BrandTeal),
+                .background(BrandGreen),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -217,7 +217,7 @@ fun LoginScreen(
             Text(
                 if (registerMode) "Already have an account? Log in"
                 else "Create account",
-                color = BrandTealLink
+                color = BrandGreenDeep
             )
         }
         TextButton(onClick = onContinueLocal, enabled = !busy) {

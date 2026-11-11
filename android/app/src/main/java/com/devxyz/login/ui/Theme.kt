@@ -1,61 +1,164 @@
 package com.devxyz.login.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
- * DevxyzLogin theme — GoLogin capture palette (GOLOGIN_CAPTURE.md §1):
- * teal-green accent family #0FBECA / #00A987 / #14AAB8; light surfaces
- * #FAFAFA on white; dark surfaces #191A24 / #1E1F2B / #2C2D3D.
+ * DevxyzLogin theme — v2.3.0 palette measured from the REAL GoLogin
+ * ANDROID app (ANDROID_UI_SPEC.md, pixel-sampled from the v3.1.151
+ * screenshots): primary leaf green #5FB173 (sampled #5DAF78–#64B479),
+ * white pages, warm light-gray cards #F6F5F4, secondary gray #8A8A8E,
+ * dark-slate FAB #293138. This REPLACES the GoLogin WEB teal family
+ * (#00A987 / #0FBECA / #14AAB8) the app used up to 2.2.0.
+ *
+ * Every color role is set explicitly in both schemes so no Material3
+ * baseline (purple-tinted) fallback can leak into chips, sheets or
+ * containers. Dark-mode values keep the 2.2.0 dark structure
+ * (#191A24 / #1E1F2B / #2C2D3D) with the primary swapped to the same
+ * green family — the real app's dark palette is not yet captured.
  */
-val BrandTeal = Color(0xFF00A987)
-val BrandTealLight = Color(0xFF0FBECA)
-val BrandTealLink = Color(0xFF14AAB8)
+val BrandGreen = Color(0xFF5FB173)
+val BrandGreenLight = Color(0xFF7CC48F)
+val BrandGreenDeep = Color(0xFF3F8F5F)
+val FabBackground = Color(0xFF293138)
 val DarkSidebar = Color(0xFF191A24)
 val DarkSurface = Color(0xFF1E1F2B)
 val DarkVariant = Color(0xFF2C2D3D)
 val StatusBlue = Color(0xFF2F7CF6)
 val DangerRed = Color(0xFFE5484D)
-val GreyText = Color(0xFF6B7280)
+val GreyText = Color(0xFF8A8A8E)
 
 private val LightColors = lightColorScheme(
-    primary = BrandTeal,
+    primary = BrandGreen,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFDEF6EE),
-    onPrimaryContainer = Color(0xFF04503F),
-    secondary = BrandTealLight,
+    primaryContainer = Color(0xFFE2F2E6),
+    onPrimaryContainer = Color(0xFF17452A),
+    secondary = BrandGreenDeep,
     onSecondary = Color.White,
+    secondaryContainer = Color(0xFFE2F2E6),
+    onSecondaryContainer = Color(0xFF17452A),
+    tertiary = Color(0xFF5B6066),
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFE8EAED),
+    onTertiaryContainer = Color(0xFF1B1B1B),
     background = Color.White,
-    onBackground = Color(0xFF111827),
-    surface = Color(0xFFFAFAFA),
-    onSurface = Color(0xFF111827),
-    surfaceVariant = Color(0xFFF1F5F9),
+    onBackground = Color(0xFF1B1B1B),
+    surface = Color.White,
+    onSurface = Color(0xFF1B1B1B),
+    surfaceVariant = Color(0xFFF6F5F4),
     onSurfaceVariant = GreyText,
-    outline = Color(0xFFE5E7EB),
+    surfaceDim = Color(0xFFE3E1E0),
+    surfaceBright = Color.White,
+    surfaceContainerLowest = Color.White,
+    surfaceContainerLow = Color.White,
+    surfaceContainer = Color(0xFFF8F6F5),
+    surfaceContainerHigh = Color(0xFFF6F5F4),
+    surfaceContainerHighest = Color(0xFFEFEDEB),
+    surfaceTint = BrandGreen,
+    inverseSurface = Color(0xFF1B1B1B),
+    inverseOnSurface = Color(0xFFF5F5F5),
+    inversePrimary = BrandGreenLight,
+    outline = Color(0xFFE7E7E7),
+    outlineVariant = Color(0xFFECECEC),
+    scrim = Color.Black,
     error = DangerRed,
-    onError = Color.White
+    onError = Color.White,
+    errorContainer = Color(0xFFFDECEC),
+    onErrorContainer = Color(0xFF7A1F22)
 )
 
 private val DarkColors = darkColorScheme(
-    primary = BrandTealLight,
-    onPrimary = Color(0xFF062A28),
-    primaryContainer = Color(0xFF0D8478),
-    onPrimaryContainer = Color.White,
-    secondary = BrandTeal,
+    primary = BrandGreenLight,
+    onPrimary = Color(0xFF0E2A17),
+    primaryContainer = Color(0xFF2E5C3D),
+    onPrimaryContainer = Color(0xFFD9F2E0),
+    secondary = BrandGreen,
     onSecondary = Color.White,
+    secondaryContainer = DarkVariant,
+    onSecondaryContainer = Color(0xFFD9F2E0),
+    tertiary = Color(0xFF9AA0A6),
+    onTertiary = DarkSidebar,
+    tertiaryContainer = DarkVariant,
+    onTertiaryContainer = Color(0xFFE8EAED),
     background = DarkSurface,
     onBackground = Color(0xFFF3F4F6),
     surface = DarkSidebar,
     onSurface = Color(0xFFF3F4F6),
     surfaceVariant = DarkVariant,
     onSurfaceVariant = Color(0xFFB6BAC4),
+    surfaceDim = Color(0xFF14151D),
+    surfaceBright = DarkVariant,
+    surfaceContainerLowest = Color(0xFF12131B),
+    surfaceContainerLow = DarkSurface,
+    surfaceContainer = Color(0xFF232433),
+    surfaceContainerHigh = DarkVariant,
+    surfaceContainerHighest = Color(0xFF35364A),
+    surfaceTint = BrandGreenLight,
+    inverseSurface = Color(0xFFF3F4F6),
+    inverseOnSurface = Color(0xFF1B1B1B),
+    inversePrimary = BrandGreen,
     outline = Color(0xFF3A3B4D),
+    outlineVariant = DarkVariant,
+    scrim = Color.Black,
     error = DangerRed,
-    onError = Color.White
+    onError = Color.White,
+    errorContainer = Color(0xFF5C2326),
+    onErrorContainer = Color(0xFFFDECEC)
+)
+
+/**
+ * Bold-led typography (the real app's UI is bold-led: profile names,
+ * tab labels, accordion headers, screen titles). Only the styles the
+ * spec speaks about are overridden; the rest keep the M3 defaults.
+ */
+private val BaseTypography = Typography()
+private val AppTypography = Typography(
+    titleLarge = TextStyle(
+        fontFamily = BaseTypography.titleLarge.fontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 20.sp,
+        lineHeight = 26.sp,
+        letterSpacing = 0.sp
+    ),
+    titleMedium = TextStyle(
+        fontFamily = BaseTypography.titleMedium.fontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 16.sp,
+        lineHeight = 22.sp,
+        letterSpacing = 0.sp
+    ),
+    titleSmall = TextStyle(
+        fontFamily = BaseTypography.titleSmall.fontFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        letterSpacing = 0.sp
+    )
+)
+
+/**
+ * Spec radii: cards/accordions ~10dp (medium — the M3 Card default),
+ * fields ~8–10dp (extraSmall lifts every OutlinedTextField off the
+ * 4dp M3 default). Buttons and the FAB set their shapes explicitly
+ * (8dp / circle) at the call sites that the spec covers.
+ */
+private val AppShapes = Shapes(
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(8.dp),
+    medium = RoundedCornerShape(10.dp),
+    large = RoundedCornerShape(12.dp),
+    extraLarge = RoundedCornerShape(16.dp)
 )
 
 /**
@@ -71,6 +174,8 @@ fun DevxyzTheme(themeMode: String = "system", content: @Composable () -> Unit) {
     }
     MaterialTheme(
         colorScheme = if (dark) DarkColors else LightColors,
+        typography = AppTypography,
+        shapes = AppShapes,
         content = content
     )
 }
