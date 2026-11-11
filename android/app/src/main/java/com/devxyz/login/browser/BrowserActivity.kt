@@ -13,6 +13,7 @@ import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -67,6 +68,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -80,6 +82,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -104,6 +107,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -180,6 +184,9 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
     private var showBookmarks by mutableStateOf(false)
     private var showConsole by mutableStateOf(false)
     private var stubDialog by mutableStateOf<String?>(null)
+    /** v2.3.1: the active tab's main-frame load died on a proxy error
+     *  (ERR_PROXY_*) — BrowserContent shows our own error state for it. */
+    private var proxyError by mutableStateOf(false)
 
     private val stopReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -363,6 +370,26 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
             }
 
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = false
+
+            override fun onReceivedError(
+                view: WebView?,
+                request: WebResourceRequest?,
+                error: WebResourceError?
+            ) {
+                super.onReceivedError(view, request, error)
+                // v2.3.1: a dead proxy used to surface as Chromium's raw
+                // "net::ERR_PROXY_CONNECTION_FAILED" page on EVERY load.
+                // Detect main-frame proxy failures and let BrowserContent
+                // show our own error state (with a proxy-free escape).
+                if (request?.isForMainFrame == true) {
+                    val desc = error?.description?.toString().orEmpty()
+                    if (error?.errorCode == WebViewClient.ERROR_PROXY_CONNECTION ||
+                        desc.contains("ERR_PROXY")
+                    ) {
+                        proxyError = true
+                    }
+                }
+            }
         }
     }
 
@@ -377,6 +404,9 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
     }
 
     private fun navigateActive(raw: String) {
+        // A fresh manual navigation dismisses a stale proxy-error state;
+        // if the proxy is still dead it will simply be raised again.
+        proxyError = false
         val tab = activeTab() ?: return
         val url = resolveInput(raw)
         if (url == NTP_URL) {
@@ -421,7 +451,9 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
      * supported by ProxyController; we say so instead of failing silently.
      */
     private fun applyProxy(profile: Profile, done: () -> Unit) {
-        val proxy = profile.proxy
+        // v2.3.1 run-path guard: never apply the fake demo host baked into
+        // profiles by builds ≤ 2.3.0 — sanitized() maps it to "no proxy".
+        val proxy = profile.proxy.sanitized()
         if (!proxy.isSet) {
             clearProxy(done)
             return
@@ -469,6 +501,20 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
             )
         } catch (e: Exception) {
             done()
+        }
+    }
+
+    /**
+     * "Launch without proxy" from the proxy-error state: drop the proxy
+     * override for THIS session only (the stored profile is untouched) and
+     * reload the page the user actually wanted, direct.
+     */
+    private fun launchWithoutProxy() {
+        proxyError = false
+        clearProxy {
+            val tab = activeTab() ?: return@clearProxy
+            val target = tab.url
+            if (target != NTP_URL) tab.webView?.loadUrl(target)
         }
     }
 
@@ -589,6 +635,41 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
                     // GoLogin pages render blank → centered spinner → content
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = BrandGreen)
+                    }
+                }
+                if (proxyError) {
+                    // v2.3.1: the profile's proxy could not be reached
+                    // (ERR_PROXY_*) — our own error state instead of
+                    // Chromium's raw error page, with a proxy-free escape.
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background)
+                            .padding(24.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            "Proxy connection failed",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "This profile's proxy (${p.proxy.listLabel}) could not be " +
+                                "reached, so pages can't load. Check the proxy in the " +
+                                "profile settings, or open this session without one.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(20.dp))
+                        Button(onClick = { launchWithoutProxy() }) {
+                            Text("Launch without proxy")
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedButton(onClick = { stopProfile() }) {
+                            Text("Close")
+                        }
                     }
                 }
             }

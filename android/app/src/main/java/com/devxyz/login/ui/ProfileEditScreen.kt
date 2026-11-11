@@ -361,13 +361,14 @@ fun ProfileEditScreen(
                                 it.code to "${Countries.flag(it.code)} ${it.name}"
                             },
                             onSelect = { code ->
+                                // v2.3.1: picking a country only records the
+                                // choice — it must NEVER write a proxy host
+                                // into the profile. A real built-in endpoint
+                                // is assigned by the server via "Check Proxy"
+                                // below; until then the profile stays
+                                // proxy-free (no baked-in demo host).
                                 profile = profile.copy(
-                                    proxy = profile.proxy.copy(
-                                        buyCountry = code,
-                                        type = "http",
-                                        host = "geo.devxyzlogin.local",
-                                        port = 10080
-                                    )
+                                    proxy = profile.proxy.copy(buyCountry = code)
                                 )
                             }
                         )
