@@ -99,6 +99,23 @@ data class ProxyConfig(
     val listLabel: String
         get() = if (!isSet) "No proxy"
         else "${type.uppercase()} • $host:$port"
+
+    /**
+     * Migration guard (v2.3.1): builds up to 2.3.0 baked a FAKE demo proxy
+     * host into profiles ([LEGACY_DEMO_HOST] — a placeholder that was never
+     * a real endpoint, so every page died with ERR_PROXY_CONNECTION_FAILED).
+     * A stored config pointing at that host is not a real proxy: treat it
+     * as "Without proxy" so existing installs heal with no data loss.
+     * Real proxies are only ever assigned by the server (built-in) or typed
+     * by the user (custom) — never baked into the app.
+     */
+    fun sanitized(): ProxyConfig =
+        if (host == LEGACY_DEMO_HOST) copy(mode = "none", host = "", port = 0) else this
+
+    companion object {
+        /** The fake demo host baked into profiles by builds ≤ 2.3.0. */
+        const val LEGACY_DEMO_HOST = "geo.devxyzlogin.local"
+    }
 }
 
 /**

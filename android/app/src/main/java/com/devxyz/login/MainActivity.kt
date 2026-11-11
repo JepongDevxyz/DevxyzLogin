@@ -273,8 +273,10 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
         // GoLogin editor parity (capture §4): the name auto-increments
         // "profile N" (the Default-profile-settings name template, with
         // {number} substituted), the OS default is Linux, the Proxy
-        // segment default is the built-in proxy (France / Residential),
-        // and bookmarks start from the editor-variant default list.
+        // segment default is Without proxy (v2.3.1: built-in proxies are
+        // only ever assigned by the server at "Check Proxy" time — never
+        // a baked-in host), and bookmarks start from the editor-variant
+        // default list.
         val usedNumbers = store.profiles.mapNotNull { p ->
             Regex("""^profile (\d+)$""").find(p.name.trim())?.groupValues?.get(1)?.toIntOrNull()
         }
@@ -287,12 +289,7 @@ fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
             name = name,
             os = "linux",
             fingerprint = FingerprintGenerator.generate("linux"),
-            proxy = com.devxyz.login.model.ProxyConfig(
-                mode = "devxyz",
-                type = "http",
-                host = "geo.devxyzlogin.local",
-                port = 10080
-            ),
+            proxy = com.devxyz.login.model.ProxyConfig(mode = "none"),
             bookmarks = DefaultBookmarks.editorLines,
             createdAt = now, updatedAt = now
         )

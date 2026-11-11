@@ -38,7 +38,7 @@ class ProfileStore(context: Context) {
         } catch (e: Exception) {
             Store()
         }
-        if (loaded.profiles.isNotEmpty() || storeFile.exists()) return loaded
+        if (loaded.profiles.isNotEmpty() || storeFile.exists()) return loaded.sanitized()
         // First run: seed 1 workspace, 1 folder, 1 sample profile.
         val now = nowIso()
         val folder = Folder(id = newId(), name = "Social")
@@ -69,10 +69,24 @@ class ProfileStore(context: Context) {
 
     /** Read-only load for browser processes (no seeding side effects). */
     fun loadReadOnly(): Store = try {
-        if (storeFile.exists()) json.decodeFromString<Store>(storeFile.readText()) else Store()
+        if (storeFile.exists()) json.decodeFromString<Store>(storeFile.readText()).sanitized()
+        else Store()
     } catch (e: Exception) {
         Store()
     }
+
+    /**
+     * v2.3.1 migration guard: strip the fake demo proxy host baked into
+     * stored data by builds ≤ 2.3.0 (see ProxyConfig.sanitized). Applied on
+     * every load so existing installs heal in memory — and permanently the
+     * next time the store is saved — without losing any profile data.
+     * Covers profiles and the shared-proxy list (a saved entry with the fake
+     * host could otherwise be picked into a profile and applied at run time).
+     */
+    private fun Store.sanitized(): Store = copy(
+        profiles = profiles.map { p -> p.copy(proxy = p.proxy.sanitized()) },
+        proxies = proxies.map { sp -> sp.copy(proxy = sp.proxy.sanitized()) }
+    )
 
     fun findProfile(store: Store, id: String): Profile? =
         store.profiles.firstOrNull { it.id == id }
