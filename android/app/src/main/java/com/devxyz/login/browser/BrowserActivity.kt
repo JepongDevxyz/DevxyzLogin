@@ -115,8 +115,8 @@ import androidx.webkit.WebViewFeature
 import com.devxyz.login.data.ProfileStore
 import com.devxyz.login.model.DefaultBookmarks
 import com.devxyz.login.model.Profile
-import com.devxyz.login.ui.BrandTeal
-import com.devxyz.login.ui.BrandTealLight
+import com.devxyz.login.ui.BrandGreen
+import com.devxyz.login.ui.BrandGreenLight
 import com.devxyz.login.ui.DangerRed
 import com.devxyz.login.ui.DevxyzTheme
 import java.net.URLEncoder
@@ -522,7 +522,7 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
                             else -> Icons.Filled.Public
                         },
                         contentDescription = null,
-                        tint = if (url.startsWith("https://")) BrandTeal
+                        tint = if (url.startsWith("https://")) BrandGreen
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier
                             .padding(horizontal = 4.dp)
@@ -566,7 +566,7 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(3.dp),
-                    color = BrandTealLight,
+                    color = BrandGreenLight,
                     trackColor = Color.Transparent
                 )
             }
@@ -588,7 +588,7 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
                 if (!proxyReady) {
                     // GoLogin pages render blank → centered spinner → content
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = BrandTeal)
+                        CircularProgressIndicator(color = BrandGreen)
                     }
                 }
             }
@@ -635,7 +635,7 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
                     color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 15.sp
                 ),
-                cursorBrush = SolidColor(BrandTeal),
+                cursorBrush = SolidColor(BrandGreen),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = {
                     onSubmit(if (editing) text else current)
@@ -832,7 +832,7 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
                 fontSize = 30.sp,
                 fontWeight = FontWeight.Bold,
                 style = TextStyle(
-                    brush = Brush.linearGradient(listOf(BrandTealLight, BrandTeal))
+                    brush = Brush.linearGradient(listOf(BrandGreenLight, BrandGreen))
                 )
             )
             Text(
@@ -863,7 +863,7 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
                             color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 16.sp
                         ),
-                        cursorBrush = SolidColor(BrandTeal),
+                        cursorBrush = SolidColor(BrandGreen),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(onSearch = { onOpen(query) }),
                         decorationBox = { inner ->
@@ -906,7 +906,7 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
                                 Text(
                                     name.firstOrNull()?.uppercase() ?: "?",
                                     fontWeight = FontWeight.Bold,
-                                    color = BrandTeal
+                                    color = BrandGreen
                                 )
                             }
                             Spacer(Modifier.height(5.dp))
@@ -959,7 +959,7 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
                                 .fillMaxWidth()
                                 .then(
                                     if (isActive) Modifier.border(
-                                        2.dp, BrandTeal, RoundedCornerShape(12.dp)
+                                        2.dp, BrandGreen, RoundedCornerShape(12.dp)
                                     ) else Modifier
                                 )
                                 .clickable {
@@ -982,7 +982,7 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
                                         Text(
                                             tab.title.firstOrNull()?.uppercase() ?: "N",
                                             fontWeight = FontWeight.Bold,
-                                            color = BrandTeal
+                                            color = BrandGreen
                                         )
                                     }
                                     Spacer(Modifier.weight(1f))
@@ -1157,7 +1157,7 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
                     }) { Text("Copy token") }
                 }
                 Spacer(Modifier.height(6.dp))
-                Text("Script", fontWeight = FontWeight.Bold, color = BrandTeal)
+                Text("Script", fontWeight = FontWeight.Bold, color = BrandGreen)
                 Text(
                     "Uses the Puppeteer page API",
                     style = MaterialTheme.typography.bodySmall,
@@ -1176,7 +1176,7 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
                     )
                 }
                 Spacer(Modifier.height(10.dp))
-                Text("Logs", fontWeight = FontWeight.Bold, color = BrandTeal)
+                Text("Logs", fontWeight = FontWeight.Bold, color = BrandGreen)
                 val shortId = p.id.replace("-", "").take(24)
                 listOf(
                     "$now [session] connecting profileId=$shortId",

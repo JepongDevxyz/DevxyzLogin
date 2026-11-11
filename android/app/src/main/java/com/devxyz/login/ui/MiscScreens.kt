@@ -269,29 +269,29 @@ fun ProxiesScreen(
                 container = Color(0xFFDCEBFD)
             ) { buyPlaceholder("Residential") }
             ProxyKindCard(
-                title = "Mobile", action = "+ Buy", badge = null, badgeColor = BrandTeal,
+                title = "Mobile", action = "+ Buy", badge = null, badgeColor = BrandGreen,
                 desc = "Show up like a local using fresh mobile IP addresses.",
                 container = Color(0xFFE9E4FC)
             ) { buyPlaceholder("Mobile") }
             ProxyKindCard(
-                title = "Data Center", action = "+ Buy", badge = null, badgeColor = BrandTeal,
+                title = "Data Center", action = "+ Buy", badge = null, badgeColor = BrandGreen,
                 desc = "Stable, cost-efficient data center IPs when local presence isn't needed.",
                 container = Color(0xFFFBE3EC)
             ) { buyPlaceholder("Data Center") }
             ProxyKindCard(
-                title = "Dedicated IP", action = "+ Buy", badge = null, badgeColor = BrandTeal,
+                title = "Dedicated IP", action = "+ Buy", badge = null, badgeColor = BrandGreen,
                 desc = "Private IP for stable fingerprints, saved sessions, and long-term tasks.",
                 container = Color(0xFFEFF1F4)
             ) { buyPlaceholder("Dedicated IP") }
             ProxyKindCard(
-                title = "Custom proxy", action = "+ Add", badge = null, badgeColor = BrandTeal,
+                title = "Custom proxy", action = "+ Add", badge = null, badgeColor = BrandGreen,
                 desc = "Bring your own proxy of any type and use it in your profiles.",
                 container = Color(0xFFEFF1F4)
             ) {
                 Toast.makeText(context, "Use the Add proxy form below", Toast.LENGTH_SHORT).show()
             }
             ProxyKindCard(
-                title = "Device as proxy", action = "+ New device", badge = null, badgeColor = BrandTeal,
+                title = "Device as proxy", action = "+ New device", badge = null, badgeColor = BrandGreen,
                 desc = "Keep your IP address and use proxy traffic to connect to the Internet.",
                 container = Color(0xFFEFF1F4)
             ) { showDeviceModal = true }
@@ -314,7 +314,7 @@ fun ProxiesScreen(
                         }
                         Text(
                             "● Connected",
-                            color = BrandTeal,
+                            color = BrandGreen,
                             style = MaterialTheme.typography.bodySmall
                         )
                         IconButton(onClick = {
@@ -417,7 +417,7 @@ private fun ProxyKindCard(
                     Text(badge, color = badgeColor, style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.width(8.dp))
                 }
-                TextButton(onClick = onAction) { Text(action, color = BrandTeal) }
+                TextButton(onClick = onAction) { Text(action, color = BrandGreen) }
             }
             Text(desc, style = MaterialTheme.typography.bodySmall)
         }
@@ -928,7 +928,7 @@ private fun SessionsSection(
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("DevxyzLogin Android", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Text("online", color = BrandTealLink, style = MaterialTheme.typography.bodySmall)
+                Text("online", color = BrandGreenDeep, style = MaterialTheme.typography.bodySmall)
             }
             Text("Android • active now", style = MaterialTheme.typography.bodySmall)
             Text("Logs out all devices except for this one.", style = MaterialTheme.typography.bodySmall)
@@ -1303,7 +1303,7 @@ private fun BillingSection(plan: String, onPlanChange: (String) -> Unit) {
             Text("Free", style = MaterialTheme.typography.titleSmall)
             Text("3 profiles • all benefits except Profile Sharing, Cloud Launch and Team Members",
                 style = MaterialTheme.typography.bodySmall)
-            if (plan == "Free") Text("Current", color = BrandTeal)
+            if (plan == "Free") Text("Current", color = BrandGreen)
             else Button(onClick = { onPlanChange("Free") }) { Text("Try Free plan") }
         }
     }
@@ -1324,7 +1324,7 @@ private fun BillingSection(plan: String, onPlanChange: (String) -> Unit) {
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(BrandTeal)
+                                .background(BrandGreen)
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                         )
                     }
@@ -1338,7 +1338,7 @@ private fun BillingSection(plan: String, onPlanChange: (String) -> Unit) {
                 Text("✓ ${p.profiles}", style = MaterialTheme.typography.bodySmall)
                 Text("✓ 24/7 expert support", style = MaterialTheme.typography.bodySmall)
                 Text("Members: 1 • Gb resident proxy: 2", style = MaterialTheme.typography.bodySmall)
-                if (plan == p.name) Text("Current", color = BrandTeal)
+                if (plan == p.name) Text("Current", color = BrandGreen)
                 else Button(onClick = { onPlanChange(p.name) }) { Text("Try 7 days for free") }
                 Text("No card required", style = MaterialTheme.typography.bodySmall)
             }
