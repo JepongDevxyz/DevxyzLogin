@@ -107,17 +107,33 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val profileStore = ProfileStore(this)
+        // v2.5.0: the profile browser's Settings deep-links into the
+        // existing account / Vault / API-token sections via this extra.
+        val openSection = intent.getStringExtra(EXTRA_OPEN_SECTION)
         setContent {
-            DevxyzLoginApp(profileStore, this)
+            DevxyzLoginApp(profileStore, this, openSection)
         }
+    }
+
+    companion object {
+        const val EXTRA_OPEN_SECTION = "open_section"
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DevxyzLoginApp(profileStore: ProfileStore, context: Context) {
+fun DevxyzLoginApp(
+    profileStore: ProfileStore,
+    context: Context,
+    initialSection: String? = null
+) {
     var store by remember { mutableStateOf(profileStore.load()) }
-    var screen by remember { mutableStateOf<Screen>(Screen.List) }
+    var screen by remember {
+        mutableStateOf<Screen>(
+            if (initialSection != null) Screen.SettingsSection(initialSection)
+            else Screen.List
+        )
+    }
 
     val prefs = remember { context.getSharedPreferences("devxyz_prefs", Context.MODE_PRIVATE) }
 
