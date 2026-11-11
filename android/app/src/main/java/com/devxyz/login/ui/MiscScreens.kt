@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Delete
@@ -64,6 +66,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.devxyz.login.data.ApiResult
 import com.devxyz.login.data.ApiTokenMeta
 import com.devxyz.login.data.AuthSession
@@ -87,14 +90,8 @@ import kotlin.random.Random
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SimpleTopBar(title: String, onBack: () -> Unit) {
-    TopAppBar(
-        title = { Text(title) },
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
-            }
-        }
-    )
+    // v2.4.0: flat spec header (back arrow + bold title, no app bar).
+    BackHeader(title = title, onBack = onBack)
 }
 
 /** Folders manager: create / rename / delete / rearrange (move up-down). */
@@ -130,9 +127,9 @@ fun FoldersScreen(
             }
             store.folders.forEachIndexed { index, folder ->
                 val count = store.profiles.count { it.deletedAt == null && folder.id in it.folderIds }
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Column {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
@@ -165,6 +162,9 @@ fun FoldersScreen(
                             ))
                         }) { Icon(Icons.Filled.Delete, contentDescription = "Delete folder") }
                     }
+                    androidx.compose.material3.HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
                 }
             }
             if (store.folders.isEmpty()) Text("No folders yet.")
@@ -264,47 +264,42 @@ fun ProxiesScreen(
                 }
             }
 
-            // Six GoLogin cards (capture §8)
+            // Six proxy kinds (capture §8) — v2.4.0: flat rows with
+            // hairline dividers instead of the pastel cards.
             ProxyKindCard(
                 title = "Residential", action = "+ Buy",
                 badge = "0.49 GB ⚠", badgeColor = Color(0xFFD97706),
-                desc = "Residential proxies that look like real home internet.",
-                container = Color(0xFFDCEBFD)
+                desc = "Residential proxies that look like real home internet."
             ) { buyPlaceholder("Residential") }
             ProxyKindCard(
                 title = "Mobile", action = "+ Buy", badge = null, badgeColor = BrandGreen,
-                desc = "Show up like a local using fresh mobile IP addresses.",
-                container = Color(0xFFE9E4FC)
+                desc = "Show up like a local using fresh mobile IP addresses."
             ) { buyPlaceholder("Mobile") }
             ProxyKindCard(
                 title = "Data Center", action = "+ Buy", badge = null, badgeColor = BrandGreen,
-                desc = "Stable, cost-efficient data center IPs when local presence isn't needed.",
-                container = Color(0xFFFBE3EC)
+                desc = "Stable, cost-efficient data center IPs when local presence isn't needed."
             ) { buyPlaceholder("Data Center") }
             ProxyKindCard(
                 title = "Dedicated IP", action = "+ Buy", badge = null, badgeColor = BrandGreen,
-                desc = "Private IP for stable fingerprints, saved sessions, and long-term tasks.",
-                container = Color(0xFFEFF1F4)
+                desc = "Private IP for stable fingerprints, saved sessions, and long-term tasks."
             ) { buyPlaceholder("Dedicated IP") }
             ProxyKindCard(
                 title = "Custom proxy", action = "+ Add", badge = null, badgeColor = BrandGreen,
-                desc = "Bring your own proxy of any type and use it in your profiles.",
-                container = Color(0xFFEFF1F4)
+                desc = "Bring your own proxy of any type and use it in your profiles."
             ) {
                 Toast.makeText(context, "Use the Add proxy form below", Toast.LENGTH_SHORT).show()
             }
             ProxyKindCard(
                 title = "Device as proxy", action = "+ New device", badge = null, badgeColor = BrandGreen,
-                desc = "Keep your IP address and use proxy traffic to connect to the Internet.",
-                container = Color(0xFFEFF1F4)
+                desc = "Keep your IP address and use proxy traffic to connect to the Internet."
             ) { showDeviceModal = true }
 
             Spacer(Modifier.height(8.dp))
             SectionTitle("Your proxies")
             if (store.proxies.isEmpty()) Text("No shared proxies yet.")
             store.proxies.forEach { shared ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column {
+                    Row(modifier = Modifier.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(shared.name, style = MaterialTheme.typography.titleSmall)
                             Text(shared.proxy.listLabel, style = MaterialTheme.typography.bodySmall)
@@ -324,13 +319,16 @@ fun ProxiesScreen(
                             onStoreChange(store.copy(proxies = store.proxies - shared))
                         }) { Icon(Icons.Filled.Delete, contentDescription = "Delete proxy") }
                     }
+                    androidx.compose.material3.HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
                 }
             }
 
             Spacer(Modifier.height(8.dp))
             SectionTitle("Add proxy")
-            OutlinedTextField(value = name, onValueChange = { name = it },
-                label = { Text("Name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            LabeledTextField(label = "Name", value = name, onValueChange = { name = it },
+                modifier = Modifier.fillMaxWidth(), singleLine = true)
             DropdownField(
                 label = "Type", value = type,
                 options = listOf("http" to "HTTP", "https" to "HTTPS", "socks4" to "SOCKS4", "socks5" to "SOCKS5"),
@@ -341,14 +339,14 @@ fun ProxiesScreen(
                 options = Countries.all.map { it.code to "${Countries.flag(it.code)} ${it.name}" },
                 onSelect = { countryCode = it }
             )
-            OutlinedTextField(value = host, onValueChange = { host = it },
-                label = { Text("Host") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(value = port, onValueChange = { port = it },
-                label = { Text("Port") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(value = username, onValueChange = { username = it },
-                label = { Text("Login (optional)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(value = password, onValueChange = { password = it },
-                label = { Text("Password (optional)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            LabeledTextField(label = "Host", value = host, onValueChange = { host = it },
+                modifier = Modifier.fillMaxWidth(), singleLine = true)
+            LabeledTextField(label = "Port", value = port, onValueChange = { port = it },
+                modifier = Modifier.fillMaxWidth(), singleLine = true)
+            LabeledTextField(label = "Login (optional)", value = username, onValueChange = { username = it },
+                modifier = Modifier.fillMaxWidth(), singleLine = true)
+            LabeledTextField(label = "Password (optional)", value = password, onValueChange = { password = it },
+                modifier = Modifier.fillMaxWidth(), singleLine = true)
             Button(
                 onClick = {
                     if (host.isNotBlank() && (port.toIntOrNull() ?: 0) > 0) {
@@ -366,7 +364,8 @@ fun ProxiesScreen(
                 },
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Add proxy") }
-            Spacer(Modifier.height(16.dp))
+            // Clearance for the floating bottom bar (Proxies is a tab root).
+            Spacer(Modifier.height(96.dp))
         }
     }
 
@@ -406,14 +405,11 @@ private fun ProxyKindCard(
     badge: String?,
     badgeColor: Color,
     desc: String,
-    container: Color,
     onAction: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = container, contentColor = Color(0xFF111827))
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+    // v2.4.0: flat white row + hairline (was a pastel card pre-spec-v2).
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(vertical = 10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                 if (badge != null) {
@@ -422,8 +418,15 @@ private fun ProxyKindCard(
                 }
                 TextButton(onClick = onAction) { Text(action, color = BrandGreen) }
             }
-            Text(desc, style = MaterialTheme.typography.bodySmall)
+            Text(
+                desc,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
+        androidx.compose.material3.HorizontalDivider(
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
     }
 }
 
@@ -491,16 +494,36 @@ fun SettingsHubScreen(onOpen: (String) -> Unit, onBack: () -> Unit) {
                 modifier = Modifier.padding(top = 10.dp)
             )
             workspace.forEach { (key, label) -> SettingsHubRow(label) { onOpen(key) } }
+            // Clearance for the floating bottom bar (Settings is a tab root).
+            Spacer(Modifier.height(96.dp))
         }
     }
 }
 
 @Composable
 private fun SettingsHubRow(label: String, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-            Text(label)
+    // v2.4.0: flat row + hairline + chevron (was a card pre-spec-v2).
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onClick() }
+                .padding(vertical = 15.dp)
+        ) {
+            Text(
+                label,
+                style = androidx.compose.ui.text.TextStyle(fontSize = 16.sp),
+                modifier = Modifier.weight(1f)
+            )
+            Icon(
+                Icons.Filled.ChevronRight, contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
+        androidx.compose.material3.HorizontalDivider(
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
     }
 }
 
@@ -586,9 +609,9 @@ private fun OverviewSection(
     var email by remember { mutableStateOf(accountEmail) }
     var showPasswordDialog by remember { mutableStateOf(false) }
 
-    Text("Account e-mail", style = MaterialTheme.typography.bodySmall)
     Row(verticalAlignment = Alignment.CenterVertically) {
-        OutlinedTextField(
+        LabeledTextField(
+            label = "Account e-mail",
             value = email, onValueChange = { email = it },
             modifier = Modifier.weight(1f), singleLine = true
         )
@@ -927,8 +950,8 @@ private fun SessionsSection(
     onSessionsChange: (List<String>) -> Unit
 ) {
     Text("This device", style = MaterialTheme.typography.titleSmall)
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp)) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(vertical = 10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("DevxyzLogin Android", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 Text("online", color = BrandGreenDeep, style = MaterialTheme.typography.bodySmall)
@@ -936,6 +959,9 @@ private fun SessionsSection(
             Text("Android • active now", style = MaterialTheme.typography.bodySmall)
             Text("Logs out all devices except for this one.", style = MaterialTheme.typography.bodySmall)
         }
+        androidx.compose.material3.HorizontalDivider(
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
     }
     sessions.filter { !it.contains("This device") }.forEach { session ->
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1010,8 +1036,15 @@ private fun ApiSection(session: AuthSession?, onRequireLogin: () -> Unit) {
     if (session == null) {
         // Tokens are account objects on the server — without an account
         // there is nothing real to show, so explain instead of faking a list.
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(12.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .border(
+                    1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp)
+                )
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
                 Text(
                     "API tokens live on your DevxyzLogin account and are managed on the server.",
                     style = MaterialTheme.typography.bodyMedium
@@ -1042,8 +1075,8 @@ private fun ApiSection(session: AuthSession?, onRequireLogin: () -> Unit) {
     }
     if (!loading && tokens.isEmpty() && loadError == null) Text("No tokens yet.")
     tokens.forEachIndexed { index, t ->
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(modifier = Modifier.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text("${index + 1}. ${t.name}", style = MaterialTheme.typography.titleSmall)
                     Text(
@@ -1071,6 +1104,9 @@ private fun ApiSection(session: AuthSession?, onRequireLogin: () -> Unit) {
                     Icon(Icons.Filled.Delete, contentDescription = "Revoke token")
                 }
             }
+            androidx.compose.material3.HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
         }
     }
     Button(onClick = {
@@ -1407,8 +1443,8 @@ private fun RestoreSection(store: Store, onStoreChange: (Store) -> Unit) {
         )
     }
     deleted.forEach { profile: Profile ->
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(modifier = Modifier.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(profile.name)
                     Text(
@@ -1425,6 +1461,9 @@ private fun RestoreSection(store: Store, onStoreChange: (Store) -> Unit) {
                     onStoreChange(store.copy(profiles = store.profiles - profile))
                 }) { Text("Delete forever") }
             }
+            androidx.compose.material3.HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
         }
     }
 }
