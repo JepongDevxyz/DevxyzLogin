@@ -30,7 +30,6 @@ import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.outlined.PushPin as OutlinedPushPin
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -267,7 +266,7 @@ private fun EditorHome(
                 if (!isNew) {
                     IconButton(onClick = onTogglePin) {
                         Icon(
-                            if (pinned) Icons.Filled.PushPin else OutlinedPushPin,
+                            Icons.Filled.PushPin,
                             contentDescription = if (pinned) "Unpin profile" else "Pin profile",
                             tint = if (pinned) BrandGreen
                             else MaterialTheme.colorScheme.onSurfaceVariant
