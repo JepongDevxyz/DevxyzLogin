@@ -44,6 +44,13 @@ data class AuthSession(
     val workspaceName: String?
 )
 
+/** Built-in proxy catalog summary (GET /api/proxies/catalog). */
+data class CatalogInfo(
+    val builtinAvailable: Boolean,
+    /** type key → GB balance when the server reports one, else null. */
+    val availableGb: Map<String, Double?>
+)
+
 /** API-token metadata (GET /api/tokens) — the raw token is never in here. */
 @Serializable
 data class ApiTokenMeta(
@@ -248,6 +255,29 @@ class ServerApi(private val baseUrl: String = BASE_URL) {
             is ApiResult.Failure -> r
         }
     }
+
+    /**
+     * Built-in proxy catalog (GET /api/proxies/catalog): whether ANY
+     * provider is configured on the server ([CatalogInfo.builtinAvailable])
+     * and, per type key ("residential" | "mobile" | "datacenter"), a
+     * measured GB balance IF the server reports one (it currently does
+     * not — the value stays null and the UI shows the honest
+     * "0.00 GB available" / no-provider state instead of inventing one).
+     */
+    suspend fun catalog(token: String): ApiResult<CatalogInfo> =
+        when (val r = request("GET", "/api/proxies/catalog", token, null, null)) {
+            is ApiResult.Success -> {
+                val available = (r.data["builtinAvailable"] as? JsonPrimitive)?.booleanOrNull ?: false
+                val gb = mutableMapOf<String, Double?>()
+                (r.data["catalog"] as? kotlinx.serialization.json.JsonArray)?.forEach { el ->
+                    val o = el as? JsonObject ?: return@forEach
+                    val type = o.str("type") ?: return@forEach
+                    gb[type] = (o["availableGb"] as? JsonPrimitive)?.contentOrNull?.toDoubleOrNull()
+                }
+                ApiResult.Success(CatalogInfo(builtinAvailable = available, availableGb = gb))
+            }
+            is ApiResult.Failure -> r
+        }
 
     // ------------------------------------------------------------------
     // API tokens

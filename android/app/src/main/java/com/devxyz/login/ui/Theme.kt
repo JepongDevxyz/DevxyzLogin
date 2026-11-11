@@ -8,6 +8,8 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -15,22 +17,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * DevxyzLogin theme — v2.3.0 palette measured from the REAL GoLogin
- * ANDROID app (ANDROID_UI_SPEC.md, pixel-sampled from the v3.1.151
- * screenshots): primary leaf green #5FB173 (sampled #5DAF78–#64B479),
- * white pages, warm light-gray cards #F6F5F4, secondary gray #8A8A8E,
- * dark-slate FAB #293138. This REPLACES the GoLogin WEB teal family
- * (#00A987 / #0FBECA / #14AAB8) the app used up to 2.2.0.
+ * DevxyzLogin theme — v2.4.0 palette measured from the REAL current
+ * GoLogin ANDROID app (ANDROID_UI_SPEC_V2.md, from the user's own
+ * screen recording of the app on her phone): primary green #00A886,
+ * white pages, FLAT rows with hairline dividers (no gray cards),
+ * running-row tint #F3FDF5, "Proxy is ok!" box #F5FCF7, pale-green tag
+ * pills, solid red stop square. This REPLACES the v2.3.0 store-shot
+ * palette (#5FB173 leaf green / #F6F5F4 cards / dark FAB) — those
+ * screenshots were the OLD app UI.
  *
  * Every color role is set explicitly in both schemes so no Material3
  * baseline (purple-tinted) fallback can leak into chips, sheets or
  * containers. Dark-mode values keep the 2.2.0 dark structure
  * (#191A24 / #1E1F2B / #2C2D3D) with the primary swapped to the same
- * green family — the real app's dark palette is not yet captured.
+ * green family — the real app's dark palette is not captured.
  */
-val BrandGreen = Color(0xFF5FB173)
-val BrandGreenLight = Color(0xFF7CC48F)
-val BrandGreenDeep = Color(0xFF3F8F5F)
+val BrandGreen = Color(0xFF00A886)
+val BrandGreenLight = Color(0xFF33C9AC)
+val BrandGreenDeep = Color(0xFF00755F)
 val FabBackground = Color(0xFF293138)
 val DarkSidebar = Color(0xFF191A24)
 val DarkSurface = Color(0xFF1E1F2B)
@@ -39,15 +43,33 @@ val StatusBlue = Color(0xFF2F7CF6)
 val DangerRed = Color(0xFFE5484D)
 val GreyText = Color(0xFF8A8A8E)
 
+/** Spec tints that have no Material3 role — picked light/dark via
+ *  [LocalDarkTheme] in the component helpers (Components.kt). */
+val RunningTintLight = Color(0xFFF3FDF5)
+val RunningTintDark = Color(0xFF10312A)
+val ProxyOkLight = Color(0xFFF5FCF7)
+val ProxyOkDark = Color(0xFF10312A)
+val TagGreenBgLight = Color(0xFFE7F6EC)
+val TagGreenBgDark = Color(0xFF1C4634)
+val TagGreenTextLight = Color(0xFF177245)
+val TagGreenTextDark = Color(0xFF7FD6A4)
+val TagGrayBgLight = Color(0xFFF0F0F0)
+val TagGrayBgDark = Color(0xFF2C2D3D)
+
+/** True when the EFFECTIVE theme (incl. the Settings theme override)
+ *  is dark — provided by [DevxyzTheme] so components can pick the
+ *  spec tints above without hardcoding light-only colors. */
+val LocalDarkTheme = staticCompositionLocalOf { false }
+
 private val LightColors = lightColorScheme(
     primary = BrandGreen,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFE2F2E6),
-    onPrimaryContainer = Color(0xFF17452A),
+    primaryContainer = Color(0xFFE7F6EC),
+    onPrimaryContainer = Color(0xFF00503F),
     secondary = BrandGreenDeep,
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFE2F2E6),
-    onSecondaryContainer = Color(0xFF17452A),
+    secondaryContainer = Color(0xFFDFF5EE),
+    onSecondaryContainer = Color(0xFF00503F),
     tertiary = Color(0xFF5B6066),
     onTertiary = Color.White,
     tertiaryContainer = Color(0xFFE8EAED),
@@ -80,13 +102,13 @@ private val LightColors = lightColorScheme(
 
 private val DarkColors = darkColorScheme(
     primary = BrandGreenLight,
-    onPrimary = Color(0xFF0E2A17),
-    primaryContainer = Color(0xFF2E5C3D),
-    onPrimaryContainer = Color(0xFFD9F2E0),
+    onPrimary = Color(0xFF00382C),
+    primaryContainer = Color(0xFF0E4A3C),
+    onPrimaryContainer = Color(0xFFC9F2E4),
     secondary = BrandGreen,
     onSecondary = Color.White,
-    secondaryContainer = DarkVariant,
-    onSecondaryContainer = Color(0xFFD9F2E0),
+    secondaryContainer = Color(0xFF0E4A3C),
+    onSecondaryContainer = Color(0xFFC9F2E4),
     tertiary = Color(0xFF9AA0A6),
     onTertiary = DarkSidebar,
     tertiaryContainer = DarkVariant,
@@ -148,17 +170,16 @@ private val AppTypography = Typography(
 )
 
 /**
- * Spec radii: cards/accordions ~10dp (medium — the M3 Card default),
- * fields ~8–10dp (extraSmall lifts every OutlinedTextField off the
- * 4dp M3 default). Buttons and the FAB set their shapes explicitly
- * (8dp / circle) at the call sites that the spec covers.
+ * Spec radii (v2 spec): outlined fields and bottom buttons ~12dp
+ * (large), bottom sheets ~20dp top corners (set at the sheet call
+ * sites). Buttons set their shapes explicitly at the call sites.
  */
 private val AppShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
-    small = RoundedCornerShape(8.dp),
-    medium = RoundedCornerShape(10.dp),
+    small = RoundedCornerShape(10.dp),
+    medium = RoundedCornerShape(12.dp),
     large = RoundedCornerShape(12.dp),
-    extraLarge = RoundedCornerShape(16.dp)
+    extraLarge = RoundedCornerShape(20.dp)
 )
 
 /**
@@ -172,10 +193,12 @@ fun DevxyzTheme(themeMode: String = "system", content: @Composable () -> Unit) {
         "dark" -> true
         else -> isSystemInDarkTheme()
     }
-    MaterialTheme(
-        colorScheme = if (dark) DarkColors else LightColors,
-        typography = AppTypography,
-        shapes = AppShapes,
-        content = content
-    )
+    CompositionLocalProvider(LocalDarkTheme provides dark) {
+        MaterialTheme(
+            colorScheme = if (dark) DarkColors else LightColors,
+            typography = AppTypography,
+            shapes = AppShapes,
+            content = content
+        )
+    }
 }

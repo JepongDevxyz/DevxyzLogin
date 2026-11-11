@@ -5,14 +5,15 @@
         <item name="android:statusBarColor">#FFFFFF</item>
     </style>
 
-    <!-- Branded launch theme: green-gradient window background with
-         the white logo mark centered — shown from the first frame, no
-         white flash. Bar colors match the gradient edge (#009A7D). -->
+    <!-- Branded launch theme (v2.4.0): the splash drawable (white
+         background, centered green tile with the white mark) as the
+         window background, shown from the first frame. Bars are white
+         to match. -->
     <style name="Theme.DevxyzLogin.Splash" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@drawable/splash_background</item>
-        <item name="android:statusBarColor">#009A7D</item>
-        <item name="android:navigationBarColor">#009A7D</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:statusBarColor">#FFFFFF</item>
+        <item name="android:navigationBarColor">#FFFFFF</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 </resources>

@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- v2.3.0: GoLogin ANDROID app palette (pixel-measured, see
-         ANDROID_UI_SPEC.md). Launcher-icon background kept dark — the
-         icon is our own branding decision, not part of the UI parity. -->
+    <!-- v2.4.0: REAL current GoLogin ANDROID palette (measured from
+         the user's own recording, see ANDROID_UI_SPEC_V2.md).
+         Launcher-icon background kept dark — the icon is our own
+         branding decision, not part of the UI parity. -->
     <color name="ic_launcher_background">#191A24</color>
-    <!-- Splash base green (gradient center, ~#00B08B per spec screen-3) -->
-    <color name="splash_background">#00B08B</color>
-    <color name="brand_green">#5FB173</color>
-    <color name="brand_green_light">#7CC48F</color>
+    <!-- Splash page background (white in spec v2) -->
+    <color name="splash_background">#FFFFFF</color>
+    <color name="brand_green">#00A886</color>
+    <color name="brand_green_light">#33C9AC</color>
     <color name="surface_dark">#1E1F2B</color>
 </resources>

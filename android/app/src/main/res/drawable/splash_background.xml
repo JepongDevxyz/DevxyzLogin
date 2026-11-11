@@ -1,22 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Branded splash (v2.3.0): brand-green radial gradient + centered
-     white logo mark — mirrors the GoLogin Android splash LAYOUT
-     (spec screen-3: green field, ~90dp white mark centered) with our
-     own DevxyzLogin mark. Used as the launch theme's windowBackground
-     so there is no white flash. -->
+<!-- Branded splash (v2.4.0, ANDROID_UI_SPEC_V2.md): WHITE background
+     with a centered #00A886 rounded-square tile (~110dp) carrying the
+     white logo mark — the layout the real current GoLogin app uses.
+     Used as the launch theme's windowBackground so the branded splash
+     is up from the first frame. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <gradient
-                android:type="radial"
-                android:gradientRadius="75%p"
-                android:startColor="#00B08B"
-                android:endColor="#009A7D" />
+            <solid android:color="#FFFFFF" />
         </shape>
     </item>
     <item
-        android:width="90dp"
-        android:height="90dp"
+        android:width="110dp"
+        android:height="110dp"
+        android:gravity="center">
+        <shape android:shape="rectangle">
+            <corners android:radius="24dp" />
+            <solid android:color="#00A886" />
+        </shape>
+    </item>
+    <item
+        android:width="62dp"
+        android:height="62dp"
         android:gravity="center"
         android:drawable="@drawable/splash_logo_white" />
 </layer-list>
