@@ -380,6 +380,7 @@ fun DevxyzLoginApp(
         // v4: no session and local mode not chosen yet → the account gate
         // comes first (the GoLogin Android app also opens on login).
         LoginScreen(
+            plan = plan,
             onLoggedIn = { s ->
                 session = s
                 sessionStore.save(s)
@@ -522,6 +523,7 @@ fun DevxyzLoginApp(
                         },
                         session = session,
                         onRequireLogin = { forceLogin = true },
+                        onOpenSection = { key -> screen = Screen.SettingsSection(key) },
                         onBack = { screen = Screen.SettingsHub }
                     )
                 }

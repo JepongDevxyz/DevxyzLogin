@@ -388,20 +388,23 @@ private fun FilterRow(label: String, selected: Boolean, onClick: () -> Unit) {
 
 /**
  * Second line of a row (spec v2): green/grey dot + flag + country
- * code. Shown ONLY when a proxy is attached. (The reference also
- * shows a data size, "0.3 GB" — our profile schema carries no data
- * allowance for a proxy, so the size is omitted rather than invented.)
- * Falls back to the proxy endpoint label when no country is known.
+ * code, plus " • X.X GB" when the profile's proxy carries a real
+ * server-assigned balance (proxy.dataGb — provider-declared on the
+ * server, v6). The GB segment appears ONLY when dataGb != null; the
+ * number is never invented. Falls back to the proxy endpoint label
+ * when no country is known.
  */
 private fun Profile.proxyLineText(): String {
     val chk = lastProxyCheck
-    return when {
+    val base = when {
         chk != null && chk.countryCode.isNotBlank() ->
             "${Countries.flag(chk.countryCode)} ${chk.countryCode.uppercase()}"
         proxy.mode == "devxyz" ->
             "${Countries.flag(proxy.buyCountry)} ${proxy.buyCountry.uppercase()}"
         else -> proxy.listLabel
     }
+    val gb = proxy.dataGb ?: return base
+    return base + " • " + String.format(java.util.Locale.US, "%.1f", gb) + " GB"
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)

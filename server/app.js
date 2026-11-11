@@ -210,7 +210,11 @@ function defaultFingerprint() {
   };
 }
 function defaultProxy() {
-  return { mode: 'none', type: 'http', host: '', port: 0, username: '', password: '' };
+  // dataGb (v6 additive, ../SHARED_SCHEMA.md): the GB balance a built-in
+  // assignment draws from, exactly as declared by the configured provider
+  // in providers.json / RESIDENTIAL_PROVIDERS — null while no provider
+  // declares one. Never computed, never estimated.
+  return { mode: 'none', type: 'http', host: '', port: 0, username: '', password: '', dataGb: null };
 }
 function buildProfile(body) {
   const base = {
@@ -276,11 +280,33 @@ function loadProviders() {
     types: Array.isArray(p.types) ? p.types : [],
     endpointTemplate: typeof p.endpointTemplate === 'string' ? p.endpointTemplate : '',
     configured: !!(p.endpointTemplate && String(p.endpointTemplate).trim()),
+    // Optional operator-declared GB balance: a number (applies to every
+    // type the provider serves) or an object keyed by type. It is the
+    // provider account's real balance as declared by the operator —
+    // the server never invents or estimates one.
+    gbAvailable: (typeof p.gbAvailable === 'number' && isFinite(p.gbAvailable) && p.gbAvailable >= 0)
+      ? p.gbAvailable
+      : (isPlainObject(p.gbAvailable) ? p.gbAvailable : null),
   }));
 }
 function publicProviders() {
   // The endpoint template itself is never echoed back (it may embed a password).
-  return loadProviders().map((p) => ({ id: p.id, name: p.name, types: p.types, configured: p.configured }));
+  return loadProviders().map((p) => ({ id: p.id, name: p.name, types: p.types, configured: p.configured, gbAvailable: p.gbAvailable }));
+}
+
+// The GB balance declared for one proxy type: the first CONFIGURED
+// provider serving that type that declares a number for it. null when
+// no provider is configured or none declares a balance.
+function gbAvailableFor(type) {
+  for (const p of loadProviders()) {
+    if (!p.configured || !p.types.includes(type)) continue;
+    if (typeof p.gbAvailable === 'number') return p.gbAvailable;
+    if (isPlainObject(p.gbAvailable)) {
+      const v = p.gbAvailable[type];
+      if (typeof v === 'number' && isFinite(v) && v >= 0) return v;
+    }
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -480,9 +506,9 @@ async function handleProxies(req, res, auth, workspaceId, seg) {
     const providers = publicProviders();
     return ok(res, {
       catalog: [
-        { type: 'residential', label: 'Residential', unit: 'GB', pricePerGb: 3.0, currency: 'USD', countries: CATALOG_COUNTRIES, note: 'Real residential IPs — requires a configured residential provider (see providers).' },
-        { type: 'mobile', label: 'Mobile', unit: 'GB', pricePerGb: 6.0, currency: 'USD', countries: CATALOG_COUNTRIES, note: 'Mobile-carrier IPs — requires a configured provider.' },
-        { type: 'datacenter', label: 'Datacenter', unit: 'GB', pricePerGb: 1.0, currency: 'USD', countries: CATALOG_COUNTRIES, note: 'Datacenter IPs — requires a configured provider; free third-party datacenter proxies can also be added as shared proxies.' },
+        { type: 'residential', label: 'Residential', unit: 'GB', pricePerGb: 3.0, currency: 'USD', gbAvailable: gbAvailableFor('residential'), countries: CATALOG_COUNTRIES, note: 'Real residential IPs — requires a configured residential provider (see providers).' },
+        { type: 'mobile', label: 'Mobile', unit: 'GB', pricePerGb: 6.0, currency: 'USD', gbAvailable: gbAvailableFor('mobile'), countries: CATALOG_COUNTRIES, note: 'Mobile-carrier IPs — requires a configured provider.' },
+        { type: 'datacenter', label: 'Datacenter', unit: 'GB', pricePerGb: 1.0, currency: 'USD', gbAvailable: gbAvailableFor('datacenter'), countries: CATALOG_COUNTRIES, note: 'Datacenter IPs — requires a configured provider; free third-party datacenter proxies can also be added as shared proxies.' },
       ],
       providers,
       builtinAvailable: providers.some((p) => p.configured),
@@ -499,6 +525,14 @@ async function handleProxies(req, res, auth, workspaceId, seg) {
     const body = await readBody(req);
     const type = typeof body.type === 'string' && body.type ? body.type.toLowerCase() : 'residential';
     const country = typeof body.country === 'string' && body.country ? body.country.toUpperCase() : 'US';
+    // Region/city are a client PREFERENCE (v6 additive): stored on the
+    // assignment record and available to the endpoint template as
+    // {region}/{city}. They are NOT the measured exit location — the
+    // real exit is whatever POST /api/proxies/check measures afterwards.
+    const prefText = (v) => (typeof v === 'string' ? v.trim().slice(0, 80) : '');
+    const region = prefText(body.region);
+    const city = prefText(body.city);
+    const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     const provider = loadProviders().find((p) => p.configured && p.types.includes(type));
     if (!provider) {
       // Honest by design: without a plugged-in supplier there are no built-in
@@ -508,6 +542,8 @@ async function handleProxies(req, res, auth, workspaceId, seg) {
     const session = crypto.randomBytes(4).toString('hex');
     const rendered = provider.endpointTemplate
       .replace(/\{country\}/gi, country.toLowerCase())
+      .replace(/\{region\}/gi, slug(region))
+      .replace(/\{city\}/gi, slug(city))
       .replace(/\{session\}/gi, session);
     let url;
     try { url = new URL(rendered); } catch (e) {
@@ -521,9 +557,10 @@ async function handleProxies(req, res, auth, workspaceId, seg) {
       port: parseInt(url.port, 10) || 0,
       username: decodeURIComponent(url.username || ''),
       password: decodeURIComponent(url.password || ''),
+      dataGb: gbAvailableFor(type),
     };
     if (!proxy.host || !proxy.port) return fail(res, 500, 'provider endpoint template is missing host/port');
-    const created = { id: newId(), name: type[0].toUpperCase() + type.slice(1) + ' • ' + country, proxy };
+    const created = { id: newId(), name: type[0].toUpperCase() + type.slice(1) + ' • ' + country, proxy, region, city };
     db.proxies.push(created);
     db.owners.proxies[created.id] = workspaceId;
     saveDb(db);

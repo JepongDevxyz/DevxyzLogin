@@ -268,7 +268,11 @@ fun ProxiesScreen(
             // hairline dividers instead of the pastel cards.
             ProxyKindCard(
                 title = "Residential", action = "+ Buy",
-                badge = "0.49 GB ⚠", badgeColor = Color(0xFFD97706),
+                // v2.6.0: the old "0.49 GB ⚠" badge was an invented
+                // number with no data source behind it — removed. Real
+                // GB balances live in the Add-proxy type sheet, fed by
+                // the server catalog's gbAvailable.
+                badge = null, badgeColor = BrandGreen,
                 desc = "Residential proxies that look like real home internet."
             ) { buyPlaceholder("Residential") }
             ProxyKindCard(
@@ -548,6 +552,8 @@ fun SettingsSectionScreen(
     /** v4: live server session (null = local mode) for the API tokens page. */
     session: AuthSession?,
     onRequireLogin: () -> Unit,
+    /** v2.6.0: cross-section navigation (Overview's "Change plan" row). */
+    onOpenSection: (String) -> Unit = {},
     onBack: () -> Unit
 ) {
     val title = when (section) {
@@ -577,7 +583,8 @@ fun SettingsSectionScreen(
                     uiLanguage = uiLanguage,
                     onEmailChange = onEmailChange,
                     onThemeChange = onThemeChange,
-                    onLanguageChange = onLanguageChange
+                    onLanguageChange = onLanguageChange,
+                    onOpenSection = onOpenSection
                 )
                 "defaults" -> DefaultsSection(defaults, onDefaultsChange)
                 "affiliate" -> AffiliateSection()
@@ -603,22 +610,28 @@ private fun OverviewSection(
     uiLanguage: String,
     onEmailChange: (String) -> Unit,
     onThemeChange: (String) -> Unit,
-    onLanguageChange: (String) -> Unit
+    onLanguageChange: (String) -> Unit,
+    onOpenSection: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     var email by remember { mutableStateOf(accountEmail) }
     var showPasswordDialog by remember { mutableStateOf(false) }
 
+    // Overview rows follow the evidenced Overview layout (spec v1
+    // appendix, official blog): "Change email >", "Change password >",
+    // "Change plan", then the Language dropdown. The email row keeps
+    // its inline field + Save (it IS the change-email control);
+    // password and plan are flat chevron rows like the reference.
     Row(verticalAlignment = Alignment.CenterVertically) {
         LabeledTextField(
-            label = "Account e-mail",
+            label = "Change email",
             value = email, onValueChange = { email = it },
             modifier = Modifier.weight(1f), singleLine = true
         )
         TextButton(onClick = { onEmailChange(email) }) { Text("✎ Save") }
     }
-    Text("Password", style = MaterialTheme.typography.bodySmall)
-    OutlinedButton(onClick = { showPasswordDialog = true }) { Text("Change your password") }
+    SettingsHubRow("Change your password") { showPasswordDialog = true }
+    SettingsHubRow("Change plan") { onOpenSection("billing") }
     DropdownField(
         label = "Select language",
         value = uiLanguage,

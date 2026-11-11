@@ -49,6 +49,21 @@ with **exactly** these field names. JSON is the interchange format
 | `buyType` | string | **v3 additive**: `"Residential"` (default) \| `"Mobile"` \| `"Data Center"`; only for `mode="devxyz"` |
 | `dedicated` | bool | **v3 additive**: "Buy dedicated IP" segment selected, default `false` |
 | `changeIpUrl` | string | **v3 additive**: "Change IP URL for mobile proxy", default `""` |
+| `dataGb` | number \| null | **v6 additive**: GB balance the assignment draws from, exactly as declared by the configured provider on the server (`gbAvailable` in providers.json / `RESIDENTIAL_PROVIDERS`). Set ONLY on server-assigned built-in proxies; `null` = no provider declares a balance (never estimated, never invented). Android sync uploads include it only when non-null. |
+
+## v6 additive — built-in proxy catalog & assignment (server)
+
+- `GET /api/proxies/catalog`: each entry gains `gbAvailable`
+  (number | null) — the provider-declared GB balance for that type;
+  `null` while no provider is configured (or none declares a balance).
+- `POST /api/proxies/builtin` accepts an optional location
+  **preference** `{ country, type, region, city }`. The preference is
+  stored on the created assignment record (the shared-proxy object
+  gains top-level `region` / `city` strings, `""` when not requested)
+  and may feed the provider's endpoint template via `{region}` /
+  `{city}` placeholders. It is **not** the measured exit location —
+  the real exit is whatever `POST /api/proxies/check` measures.
+  The response proxy payload carries `proxy.dataGb` (above).
 
 Other v3 additive fields (all defaulted, so v1/v2 stores load unchanged): `navigator.languagesAuto` (bool, `true`), `fingerprint.mediaMasking` (bool, `true`), `browser.saveTabs` (bool, `true`), `browser.allowInstallExtensions` (bool, `true`), `SharedProxy.country` / `SharedProxy.flag` (strings, `""`).
 

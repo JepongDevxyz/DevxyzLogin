@@ -92,7 +92,17 @@ data class ProxyConfig(
     /** v3 (additive): "Buy dedicated IP" segment selected (capture §4.2). */
     val dedicated: Boolean = false,
     /** v3 (additive): "Change IP URL for mobile proxy" (capture §4.2). */
-    val changeIpUrl: String = ""
+    val changeIpUrl: String = "",
+    /**
+     * v6 (additive, SHARED_SCHEMA.md): GB balance the assignment draws
+     * from, exactly as declared by the configured provider on the
+     * server (its catalog `gbAvailable`). Set ONLY on server-assigned
+     * built-in proxies; null = no provider declares a balance — the
+     * profile list renders the "• X.X GB" segment only when non-null,
+     * and sync uploads include the key only when non-null. The number
+     * is never computed or estimated on-device.
+     */
+    val dataGb: Double? = null
 ) {
     val isSet: Boolean get() = mode != "none" && host.isNotBlank() && port > 0
     /** Short label for the profile list, e.g. "SOCKS5 • 1.2.3.4:1080" or "No proxy". */

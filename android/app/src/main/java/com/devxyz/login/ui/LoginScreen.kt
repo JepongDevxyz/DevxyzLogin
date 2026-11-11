@@ -1,27 +1,29 @@
 package com.devxyz.login.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -34,25 +36,35 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.devxyz.login.data.ApiResult
 import com.devxyz.login.data.AuthSession
 import com.devxyz.login.data.ServerApi
 import kotlinx.coroutines.launch
 
 /**
- * Account login / registration (v4) — layout follows the GoLogin Android
- * docs login screenshot: "Log in" title, "Your email", "Password" with a
- * visibility eye, one solid green full-width button, account links below.
+ * Account login / registration — v2.6.0 parity pass against the
+ * July-2026 evidenced GoLogin login layout (spec v1 appendix):
+ * white screen, the logo mark + app name centered, "Your email" /
+ * "Password" (eye) fields — here in the v2.4.0 outlined-box style —
+ * one solid green full-width button, a plan/trial banner card under
+ * it carrying OUR real plan state, account links below, and a
+ * footer version line (the installed package's real versionName).
  *
- * Deliberately ABSENT (no dead controls): "Continue with Google" and
- * "Forgot password?" — the DevxyzLogin server has no OAuth and no
- * password-reset backend, so those buttons would do nothing. They can
- * appear the day the server grows those endpoints.
+ * Deliberately ABSENT (no dead controls): "Continue with Google" —
+ * the DevxyzLogin server has no OAuth backend, so that button would
+ * do nothing; it can appear the day the server grows the endpoint.
+ * "Forgot password?" is absent for the same reason (no reset flow).
  *
  * "Continue without an account" keeps the app fully usable in local
  * mode — local profiles work exactly as before; only sync, API tokens
@@ -60,11 +72,13 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun LoginScreen(
+    plan: String,
     onLoggedIn: (AuthSession) -> Unit,
     onContinueLocal: () -> Unit
 ) {
     val api = remember { ServerApi() }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     var registerMode by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
@@ -73,6 +87,14 @@ fun LoginScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+
+    val versionName = remember {
+        try {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     fun submit() {
         val e = email.trim()
@@ -106,15 +128,17 @@ fun LoginScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Brand mark (same teal "D" tile as the drawer header)
+        Spacer(Modifier.height(16.dp))
+        // Brand mark + app name, centered (evidenced layout).
         Box(
             modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .size(64.dp)
+                .clip(RoundedCornerShape(16.dp))
                 .background(BrandGreen),
             contentAlignment = Alignment.Center
         ) {
@@ -125,52 +149,54 @@ fun LoginScreen(
                 fontWeight = FontWeight.Bold
             )
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(14.dp))
         Text(
-            if (registerMode) "Create account" else "Log in",
+            "DevxyzLogin",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            "DevxyzLogin — antidetect profiles, synced to your account.",
-            style = MaterialTheme.typography.bodySmall,
+            if (registerMode) "Create an account" else "Log in",
+            style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(28.dp))
 
         if (registerMode) {
-            OutlinedTextField(
+            SpecTextField(
+                label = "Name",
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Name") },
-                singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(12.dp))
         }
-        OutlinedTextField(
+        SpecTextField(
+            label = "Your email",
             value = email,
             onValueChange = { email = it },
-            label = { Text("Your email") },
-            singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(Modifier.height(12.dp))
-        OutlinedTextField(
+        SpecTextField(
+            label = "Password",
             value = password,
             onValueChange = { password = it },
-            label = { Text("Password") },
-            singleLine = true,
             visualTransformation = if (passwordVisible) VisualTransformation.None
             else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            trailingIcon = {
-                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+            trailing = {
+                IconButton(
+                    onClick = { passwordVisible = !passwordVisible },
+                    modifier = Modifier.size(32.dp)
+                ) {
                     Icon(
                         if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                        contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                        contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             },
@@ -188,22 +214,55 @@ fun LoginScreen(
         }
 
         Spacer(Modifier.height(20.dp))
-        Button(
-            onClick = { submit() },
-            enabled = !busy,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-        ) {
-            if (busy) {
+        if (busy) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+                contentAlignment = Alignment.Center
+            ) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    color = Color.White,
+                    modifier = Modifier.size(24.dp),
+                    color = BrandGreen,
                     strokeWidth = 2.dp
                 )
-            } else {
-                Text(if (registerMode) "Create account" else "Log In")
             }
+        } else {
+            GreenButton(
+                text = if (registerMode) "Create account" else "Sign in",
+                onClick = { submit() }
+            )
+        }
+
+        // Plan/trial banner card — same shape as the profile list's
+        // banner, carrying our REAL plan state. Informational here:
+        // plan changes live in Settings → Billing Plans after login.
+        Spacer(Modifier.height(6.dp))
+        Row(
+            verticalAlignment = Alignment.Top,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+                .padding(horizontal = 14.dp, vertical = 12.dp)
+        ) {
+            Icon(
+                Icons.Filled.Schedule, contentDescription = null,
+                tint = StatusBlue, modifier = Modifier.size(22.dp)
+            )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                buildAnnotatedString {
+                    withStyle(SpanStyle(color = StatusBlue)) {
+                        append(
+                            if (plan == "Free") "You're on the Free plan."
+                            else "Current plan: $plan."
+                        )
+                    }
+                    append(" Sign in to sync your profiles, proxies and API tokens across devices.")
+                },
+                style = TextStyle(fontSize = 15.sp, lineHeight = 21.sp)
+            )
         }
 
         Spacer(Modifier.height(8.dp))
@@ -229,6 +288,13 @@ fun LoginScreen(
         Spacer(Modifier.height(8.dp))
         Text(
             "Local mode keeps profiles on this device only. Sync, API tokens and server proxy checks need an account.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(28.dp))
+        // Footer version line — the installed build's real version.
+        Text(
+            "DevxyzLogin" + (versionName?.let { " v$it" } ?: ""),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

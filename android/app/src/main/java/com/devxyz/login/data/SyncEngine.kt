@@ -4,6 +4,7 @@ import com.devxyz.login.model.Folder
 import com.devxyz.login.model.Profile
 import com.devxyz.login.model.Store
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.encodeToJsonElement
@@ -294,6 +295,13 @@ object SyncEngine {
         val out = obj.toMutableMap()
         LOCAL_ONLY_KEYS.forEach { out.remove(it) }
         out.remove("id")
+        // v6: proxy.dataGb rides along ONLY when the server actually
+        // assigned a provider-declared balance — a null must not be
+        // uploaded as an explicit JSON null (SHARED_SCHEMA.md).
+        val proxyObj = out["proxy"] as? JsonObject
+        if (proxyObj != null && (proxyObj["dataGb"] == null || proxyObj["dataGb"] is JsonNull)) {
+            out["proxy"] = JsonObject(proxyObj - "dataGb")
+        }
         return JsonObject(out)
     }
 

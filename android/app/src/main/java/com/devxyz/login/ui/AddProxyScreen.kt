@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.devxyz.login.data.ApiResult
 import com.devxyz.login.data.CatalogInfo
+import com.devxyz.login.data.GeoData
 import com.devxyz.login.data.ServerApi
 import com.devxyz.login.model.Countries
 import com.devxyz.login.model.Country
@@ -60,6 +61,7 @@ import com.devxyz.login.model.SharedProxy
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromJsonElement
+import java.util.Locale
 
 /**
  * Add proxy — spec v2 (ANDROID_UI_SPEC_V2.md): header "Add proxy" with
@@ -69,13 +71,24 @@ import kotlinx.serialization.json.decodeFromJsonElement
  * means "0.00 GB available" and the flow stays disabled, never a fake
  * balance), then the country list (France, Germany, United Kingdom,
  * United States first, then A–Z, star favorites persisted locally).
- * Picking a country opens the "Selected proxy" sheet: the server
- * assigns a real endpoint (POST /api/proxies/builtin) and REALLY
- * checks it (POST /api/proxies/check) while a spinner shows; only a
- * passed check enables the green "Add proxy" button. Custom: the
- * existing custom-proxy form (host/port/type/auth + saved proxies +
- * the same real check) in the new field style.
+ * A country's chevron expands the curated states/cities dataset
+ * (data/GeoData.kt); picking a region/city carries it to the server
+ * as a location PREFERENCE on the assignment. Picking a country (or
+ * region/city) opens the "Selected proxy" sheet: the server assigns
+ * a real endpoint (POST /api/proxies/builtin) and REALLY checks it
+ * (POST /api/proxies/check) while a spinner shows; only a passed
+ * check enables the green "Add proxy" button. The city the sheet
+ * displays is the check's measured exit — never the preference.
+ * Custom: the existing custom-proxy form (host/port/type/auth +
+ * saved proxies + the same real check) in the new field style.
  */
+
+/** A country pick plus its optional region/city preference. */
+private data class ProxySelection(
+    val country: Country,
+    val region: String?,
+    val city: String?
+)
 
 private val ProxyTypeLabels = listOf("Residential", "Mobile", "Data Center")
 
@@ -103,7 +116,7 @@ fun AddProxyScreen(
     var proxyType by remember { mutableStateOf("Residential") }
     var showTypeSheet by remember { mutableStateOf(false) }
     var catalog by remember { mutableStateOf<CatalogInfo?>(null) }
-    var selectedCountry by remember { mutableStateOf<Country?>(null) }
+    var selection by remember { mutableStateOf<ProxySelection?>(null) }
     var favorites by remember {
         mutableStateOf(
             (prefs.getString("fav_proxy_countries", "") ?: "")
@@ -185,7 +198,10 @@ fun AddProxyScreen(
                             country = country,
                             favorite = country.code in favorites,
                             onToggleFavorite = { toggleFavorite(country.code) },
-                            onSelect = { selectedCountry = country }
+                            onSelect = { selection = ProxySelection(country, null, null) },
+                            onSelectGeo = { region, city ->
+                                selection = ProxySelection(country, region, city)
+                            }
                         )
                     }
                     item { Spacer(Modifier.height(24.dp)) }
@@ -213,17 +229,19 @@ fun AddProxyScreen(
         )
     }
 
-    selectedCountry?.let { country ->
+    selection?.let { sel ->
         SelectedProxySheet(
-            country = country,
+            country = sel.country,
+            region = sel.region,
+            city = sel.city,
             typeLabel = proxyType,
             apiToken = apiToken,
             apiWorkspaceId = apiWorkspaceId,
             onConfirm = { cfg, info ->
-                selectedCountry = null
+                selection = null
                 onConfirm(cfg, info)
             },
-            onDismiss = { selectedCountry = null }
+            onDismiss = { selection = null }
         )
     }
 }
@@ -247,10 +265,18 @@ private fun CountryRow(
     country: Country,
     favorite: Boolean,
     onToggleFavorite: () -> Unit,
-    onSelect: () -> Unit
+    onSelect: () -> Unit,
+    onSelectGeo: (region: String?, city: String?) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Column {
+    var expandedRegion by remember { mutableStateOf<String?>(null) }
+    val regions = GeoData.regionsFor(country.code)
+    // Spec v2: an opened/selected country row tints pale green.
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (expanded) Modifier.background(runningTintColor()) else Modifier)
+    ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -280,16 +306,67 @@ private fun CountryRow(
             }
         }
         if (expanded) {
-            // Our country data has no states/cities: selection is at
-            // country level and the exit city is whatever the REAL
-            // server check measures after assignment — stated, not faked.
-            Text(
-                "States and cities are not listed for ${country.name} — the country is " +
-                    "selected as a whole and the exit city is resolved by the server check.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 50.dp, end = 16.dp, bottom = 10.dp)
-            )
+            if (regions.isEmpty()) {
+                // No curated states/cities for this country: selection
+                // stays at country level and the exit city is whatever
+                // the REAL server check measures after assignment —
+                // stated, not faked.
+                Text(
+                    "States and cities are not listed for ${country.name} — the country is " +
+                        "selected as a whole and the exit city is resolved by the server check.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 50.dp, end = 16.dp, bottom = 10.dp)
+                )
+            } else {
+                // Region level: tap = prefer the whole region, chevron
+                // expands its cities; a city tap prefers that city.
+                // All three are PREFERENCES sent with the assignment
+                // request — the exit is still measured by the check.
+                regions.forEach { region ->
+                    val regionOpen = expandedRegion == region.name
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelectGeo(region.name, null) }
+                            .padding(start = 50.dp, end = 8.dp, top = 4.dp, bottom = 4.dp)
+                    ) {
+                        Text(
+                            region.name,
+                            style = TextStyle(fontSize = 15.sp),
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = {
+                            expandedRegion = if (regionOpen) null else region.name
+                        }) {
+                            Icon(
+                                if (regionOpen) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                contentDescription = if (regionOpen) "Hide cities" else "Show cities",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    if (regionOpen) {
+                        region.cities.forEach { cityName ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSelectGeo(region.name, cityName) }
+                                    .padding(start = 66.dp, end = 16.dp, top = 9.dp, bottom = 9.dp)
+                            ) {
+                                Text(
+                                    cityName,
+                                    style = TextStyle(fontSize = 15.sp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+            }
         }
         HorizontalDivider(
             color = MaterialTheme.colorScheme.outlineVariant,
@@ -298,11 +375,20 @@ private fun CountryRow(
     }
 }
 
-/** GB line for the type sheet — measured data only, never invented. */
+/**
+ * GB line for the type sheet — the server catalog's `gbAvailable`
+ * (provider-declared balance) only, never invented: a declared
+ * number renders as-is; an explicit null (no provider / no declared
+ * balance) renders "0.00 GB available".
+ */
 private fun gbLabel(catalog: CatalogInfo?, apiToken: String?, typeKey: String): String {
-    val gb = catalog?.availableGb?.get(typeKey)
+    val gbMap = catalog?.availableGb
     return when {
-        gb != null -> String.format("%.2f GB available", gb)
+        gbMap != null && gbMap.containsKey(typeKey) -> {
+            val gb = gbMap[typeKey]
+            if (gb != null) String.format(Locale.US, "%.2f GB available", gb)
+            else "0.00 GB available"
+        }
         catalog != null && catalog.builtinAvailable -> "Available"
         else -> "0.00 GB available"
     }
@@ -366,13 +452,17 @@ private fun ProxyTypeSheet(
 
 /**
  * "Selected proxy" sheet: assigns a REAL endpoint via the server and
- * REALLY checks it before the Add button unlocks. The city in the
+ * REALLY checks it before the Add button unlocks. [region]/[city]
+ * are the picker's location PREFERENCE — sent with the assignment
+ * request and stored server-side on the assignment. The city in the
  * header line comes from the check result (measured exit), never
- * from a local list.
+ * from the preference or a local list.
  */
 @Composable
 private fun SelectedProxySheet(
     country: Country,
+    region: String?,
+    city: String?,
     typeLabel: String,
     apiToken: String?,
     apiWorkspaceId: String?,
@@ -406,7 +496,7 @@ private fun SelectedProxySheet(
         }
     }
 
-    LaunchedEffect(country.code, typeLabel) {
+    LaunchedEffect(country.code, typeLabel, region, city) {
         val token = apiToken
         if (token == null) {
             checking = false
@@ -415,7 +505,10 @@ private fun SelectedProxySheet(
         }
         checking = true
         errorText = null
-        when (val r = api.builtinProxy(token, apiWorkspaceId, country.code, typeKeyOf(typeLabel))) {
+        when (val r = api.builtinProxy(
+            token, apiWorkspaceId, country.code, typeKeyOf(typeLabel),
+            region ?: "", city ?: ""
+        )) {
             is ApiResult.Success -> {
                 val proxyObj = r.data["proxy"]
                 val decoded = try {

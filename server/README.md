@@ -110,10 +110,19 @@ to:
   list), and lights up the moment a provider is plugged in: add an entry to
   `providers.json` (or the `RESIDENTIAL_PROVIDERS` env var) with an
   `endpointTemplate` — a proxy URL with `{country}` and `{session}`
-  placeholders, e.g.
+  placeholders (plus `{region}` / `{city}` for the client's location
+  preference), e.g.
   `http://user-{country}-{session}:PASSWORD@gw.provider.example:8080`.
   From then on, `POST /api/proxies/builtin {country:"PH", type:"residential"}`
   mints a real endpoint from that provider into the caller's shared list.
+  A provider entry may also declare `gbAvailable` — a number (GB, for
+  every type it serves) or an object keyed by type — which the catalog
+  reports per type and built-in assignments carry as `proxy.dataGb`.
+  It is the operator-declared balance of the provider account; when no
+  provider declares one, both stay `null` (never estimated).
+  The builtin request may carry a `region` / `city` **preference**,
+  stored on the assignment record; it is not the measured exit — the
+  checker still measures the real one.
 - **Until a provider is configured**, `builtin` honestly answers
   `501 { ok:false, error:"no residential provider configured" }` — no fake
   IPs, ever. (Provider templates are never echoed back by the catalog

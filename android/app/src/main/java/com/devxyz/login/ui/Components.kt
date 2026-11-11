@@ -219,7 +219,12 @@ fun SpecTextField(
     placeholder: String? = null,
     clearable: Boolean = false,
     singleLine: Boolean = true,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    trailing: @Composable (() -> Unit)? = null,
+    visualTransformation: androidx.compose.ui.text.input.VisualTransformation =
+        androidx.compose.ui.text.input.VisualTransformation.None,
+    keyboardOptions: androidx.compose.foundation.text.KeyboardOptions =
+        androidx.compose.foundation.text.KeyboardOptions.Default
 ) {
     SpecFieldShell(label = label, modifier = modifier, onClick = null) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -236,6 +241,8 @@ fun SpecTextField(
                     onValueChange = onValueChange,
                     singleLine = singleLine,
                     enabled = enabled,
+                    visualTransformation = visualTransformation,
+                    keyboardOptions = keyboardOptions,
                     textStyle = TextStyle(
                         fontSize = 16.sp,
                         color = MaterialTheme.colorScheme.onSurface
@@ -256,6 +263,7 @@ fun SpecTextField(
                     )
                 }
             }
+            if (trailing != null) trailing()
         }
     }
 }

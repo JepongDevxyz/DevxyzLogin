@@ -244,11 +244,17 @@ class ServerApi(private val baseUrl: String = BASE_URL) {
      * honestly fails with 501 "no residential provider configured".
      */
     suspend fun builtinProxy(
-        token: String, workspaceId: String?, country: String, type: String
+        token: String, workspaceId: String?, country: String, type: String,
+        region: String = "", city: String = ""
     ): ApiResult<JsonObject> {
         val body = buildJsonObject {
             put("country", country)
             put("type", type)
+            // v6: the region/city PREFERENCE is stored on the server's
+            // assignment record; it is never the measured exit (the
+            // exit city comes from checkProxy afterwards).
+            if (region.isNotBlank()) put("region", region)
+            if (city.isNotBlank()) put("city", city)
         }
         return when (val r = request("POST", "/api/proxies/builtin", token, workspaceId, body)) {
             is ApiResult.Success -> ApiResult.Success(r.data["proxy"]?.jsonObject ?: r.data)
@@ -259,10 +265,12 @@ class ServerApi(private val baseUrl: String = BASE_URL) {
     /**
      * Built-in proxy catalog (GET /api/proxies/catalog): whether ANY
      * provider is configured on the server ([CatalogInfo.builtinAvailable])
-     * and, per type key ("residential" | "mobile" | "datacenter"), a
-     * measured GB balance IF the server reports one (it currently does
-     * not — the value stays null and the UI shows the honest
-     * "0.00 GB available" / no-provider state instead of inventing one).
+     * and, per type key ("residential" | "mobile" | "datacenter"), the
+     * provider-declared GB balance from the entry's `gbAvailable` field
+     * (v6; `availableGb` is accepted as a legacy alias). The value is
+     * null while no provider declares one — the UI then shows the
+     * honest "0.00 GB available" / no-provider state, never an
+     * invented number.
      */
     suspend fun catalog(token: String): ApiResult<CatalogInfo> =
         when (val r = request("GET", "/api/proxies/catalog", token, null, null)) {
@@ -272,7 +280,8 @@ class ServerApi(private val baseUrl: String = BASE_URL) {
                 (r.data["catalog"] as? kotlinx.serialization.json.JsonArray)?.forEach { el ->
                     val o = el as? JsonObject ?: return@forEach
                     val type = o.str("type") ?: return@forEach
-                    gb[type] = (o["availableGb"] as? JsonPrimitive)?.contentOrNull?.toDoubleOrNull()
+                    gb[type] = (o["gbAvailable"] as? JsonPrimitive)?.contentOrNull?.toDoubleOrNull()
+                        ?: (o["availableGb"] as? JsonPrimitive)?.contentOrNull?.toDoubleOrNull()
                 }
                 ApiResult.Success(CatalogInfo(builtinAvailable = available, availableGb = gb))
             }
