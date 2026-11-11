@@ -7,8 +7,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,6 +22,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -30,6 +35,7 @@ import androidx.compose.material.icons.filled.FileCopy
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PushPin
@@ -40,6 +46,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -52,6 +59,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -64,13 +72,20 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.devxyz.login.data.ApiResult
 import com.devxyz.login.data.ProfileStore
 import com.devxyz.login.data.ServerApi
@@ -86,23 +101,31 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Profile list (GoLogin capture parity + Android-app evidence):
- * - State dot semantics: ready = hollow grey circle, running = green dot,
- *   launching = blue dot + "downloading profile..." (capture §0/§3).
- * - Run is a SOLID green filled button (GoLogin Android Play screenshot);
- *   it opens the Manual/API control choice (capture §0); running rows
- *   show View (green outline) + Stop (red outline).
- * - Top tabs per the Android app: ALL / SHARED PROFILES / folder names,
- *   uppercase with a green underline on the selected tab; the "+" FAB is
- *   a dark circle (Play screenshot). Search placeholder is "Search...".
- * - "Settings ›" opens the quick-settings sheet (Profile essentials, §5).
- * - Row ⋮ menu in the exact capture §6 order.
+ * Profile list — v2.3.0 visual rebuild against the REAL GoLogin Android
+ * app (ANDROID_UI_SPEC.md, pixel-measured from v3.1.151 screenshots):
+ * - NO app bar: the burger sits in the same row as the search field
+ *   (white, thin border, 10dp radius, placeholder "Search...").
+ * - Tabs: ALL / SHARED PROFILES / folder names, uppercase bold dark
+ *   text; the selected tab is marked ONLY by a primary-green underline
+ *   spanning the label width.
+ * - Rows are light cards (#F6F5F4, 10dp radius, 16dp padding): bold
+ *   name + flag/lowercase descriptor on the left; on the right a green
+ *   pin (when pinned), a gray OS glyph (~22dp) and the Run button
+ *   (solid #5FB173, white "Run", ~76x40dp, 8dp radius). Running rows
+ *   show View + Stop (outlined) in the same right cluster. No state
+ *   dot, no status text, no host:port, no tag line in the row.
+ * - The "+" FAB is a dark (#293138) CIRCLE.
+ * Behaviour is unchanged from 2.2.0: Run opens the Manual/API choice
+ * sheet (capture §0); the quick-settings sheet is reached via ⋮ →
+ * Cookies; the row ⋮ menu keeps the exact capture §6 order. The state
+ * dot survives only inside the quick-settings sheet.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileListScreen(
     profiles: List<Profile>,
     folders: List<Folder>,
+    onOpenDrawer: () -> Unit = {},
     onRunMode: (Profile, Boolean) -> Unit,
     onStop: (Profile) -> Unit,
     onEdit: (Profile) -> Unit,
@@ -131,11 +154,16 @@ fun ProfileListScreen(
     }.sortedByDescending { it.id in pinnedIds }
 
     Scaffold(
+        // The outer MainActivity scaffold already applied the system-bar
+        // insets; zeroing them here keeps the search row tight under the
+        // status bar (the real app has no app bar eating that space).
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onNewProfile,
-                containerColor = DarkSidebar,
-                contentColor = Color.White
+                containerColor = FabBackground,
+                contentColor = Color.White,
+                shape = CircleShape
             ) {
                 Icon(Icons.Filled.Add, contentDescription = "Add profile")
             }
@@ -145,16 +173,31 @@ fun ProfileListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 12.dp)
+                .padding(horizontal = 16.dp)
         ) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Search...") },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                singleLine = true
-            )
+            Spacer(Modifier.height(8.dp))
+            // Spec: burger inline with the search field, no app title.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onOpenDrawer) {
+                    Icon(Icons.Filled.Menu, contentDescription = "Menu")
+                }
+                Spacer(Modifier.width(4.dp))
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Search...") },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedBorderColor = BrandGreen
+                    )
+                )
+            }
             Spacer(Modifier.height(4.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 item {
@@ -194,11 +237,14 @@ fun ProfileListScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(12.dp))
-                        OutlinedButton(onClick = onNewProfile) { Text("+ Add profile") }
+                        OutlinedButton(
+                            onClick = onNewProfile,
+                            shape = RoundedCornerShape(8.dp)
+                        ) { Text("+ Add profile") }
                     }
                 }
             }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(visible, key = { it.id }) { profile ->
                     ProfileRow(
                         profile = profile,
@@ -227,49 +273,154 @@ fun ProfileListScreen(
 fun StateDot(state: String) {
     Canvas(modifier = Modifier.size(10.dp)) {
         when (state) {
-            "running" -> drawCircle(color = BrandTeal)
+            "running" -> drawCircle(color = BrandGreen)
             "launching", "syncing" -> drawCircle(color = StatusBlue)
             else -> drawCircle(color = Color(0xFF9CA3AF), style = Stroke(width = 2f))
         }
     }
 }
 
-/** Android-app tab (Play screenshot): uppercase label, green underline when selected. */
+/**
+ * Gray OS glyph for the row's right cluster (~22dp), drawn as simple
+ * vector shapes — Material icons carry no Apple logo and the spec shows
+ * plain gray brand glyphs (Windows / Apple / Android; Linux gets a
+ * penguin silhouette). Details knocked out of a glyph (Android eyes,
+ * penguin belly/eyes/beak) use the row-card color (surfaceVariant).
+ * Coordinates are in a 24-unit box, scaled to the canvas.
+ */
+@Composable
+private fun OsGlyph(os: String) {
+    val tint = MaterialTheme.colorScheme.onSurfaceVariant
+    val cutout = MaterialTheme.colorScheme.surfaceVariant
+    Canvas(modifier = Modifier.size(22.dp)) {
+        fun x(v: Float) = v / 24f * size.width
+        fun y(v: Float) = v / 24f * size.height
+        when (os) {
+            "windows10", "windows11" -> {
+                val panes = Path().apply {
+                    moveTo(x(3f), y(5.4f)); lineTo(x(10.9f), y(4.4f))
+                    lineTo(x(10.9f), y(11f)); lineTo(x(3f), y(11f)); close()
+                    moveTo(x(12.3f), y(4.2f)); lineTo(x(21f), y(3f))
+                    lineTo(x(21f), y(11f)); lineTo(x(12.3f), y(11f)); close()
+                    moveTo(x(3f), y(12.6f)); lineTo(x(10.9f), y(12.6f))
+                    lineTo(x(10.9f), y(19.6f)); lineTo(x(3f), y(18.6f)); close()
+                    moveTo(x(12.3f), y(12.6f)); lineTo(x(21f), y(12.6f))
+                    lineTo(x(21f), y(21f)); lineTo(x(12.3f), y(19.8f)); close()
+                }
+                drawPath(panes, tint)
+            }
+            "macIntel", "macArm" -> {
+                val body = Path().apply {
+                    moveTo(x(12f), y(6.6f))
+                    cubicTo(x(13.4f), y(4.6f), x(15.6f), y(4.2f), x(17.1f), y(5.6f))
+                    cubicTo(x(20f), y(8.2f), x(19.6f), y(13f), x(17.6f), y(17f))
+                    cubicTo(x(16.1f), y(19.9f), x(14.2f), y(21f), x(12f), y(19.9f))
+                    cubicTo(x(9.8f), y(21f), x(7.9f), y(19.9f), x(6.4f), y(17f))
+                    cubicTo(x(4.4f), y(13f), x(4f), y(8.2f), x(6.9f), y(5.6f))
+                    cubicTo(x(8.4f), y(4.2f), x(10.6f), y(4.6f), x(12f), y(6.6f))
+                    close()
+                }
+                val leaf = Path().apply {
+                    moveTo(x(13.1f), y(5.6f))
+                    cubicTo(x(12.9f), y(3.1f), x(14.4f), y(1.8f), x(16.6f), y(1.7f))
+                    cubicTo(x(16.5f), y(4.1f), x(15.1f), y(5.4f), x(13.1f), y(5.6f))
+                    close()
+                }
+                drawPath(body, tint)
+                drawPath(leaf, tint)
+            }
+            "android" -> {
+                drawLine(
+                    tint, Offset(x(8.2f), y(6.8f)), Offset(x(6.4f), y(3.4f)),
+                    strokeWidth = x(1.5f), cap = StrokeCap.Round
+                )
+                drawLine(
+                    tint, Offset(x(15.8f), y(6.8f)), Offset(x(17.6f), y(3.4f)),
+                    strokeWidth = x(1.5f), cap = StrokeCap.Round
+                )
+                val head = Path().apply {
+                    moveTo(x(5f), y(11.5f))
+                    arcTo(Rect(x(5f), y(6f), x(19f), y(17f)), 180f, 180f, false)
+                    lineTo(x(19f), y(16f)); lineTo(x(5f), y(16f)); close()
+                }
+                drawPath(head, tint)
+                drawCircle(cutout, radius = x(1.15f), center = Offset(x(9.4f), y(10.6f)))
+                drawCircle(cutout, radius = x(1.15f), center = Offset(x(14.6f), y(10.6f)))
+            }
+            else -> {
+                // linux — penguin silhouette
+                val body = Path().apply {
+                    moveTo(x(12f), y(2.8f))
+                    cubicTo(x(16.2f), y(2.8f), x(17.8f), y(6.8f), x(17.8f), y(11f))
+                    cubicTo(x(17.8f), y(14.8f), x(16.2f), y(17.2f), x(14.6f), y(18.8f))
+                    lineTo(x(17.2f), y(21.2f)); lineTo(x(6.8f), y(21.2f))
+                    lineTo(x(9.4f), y(18.8f))
+                    cubicTo(x(7.8f), y(17.2f), x(6.2f), y(14.8f), x(6.2f), y(11f))
+                    cubicTo(x(6.2f), y(6.8f), x(7.8f), y(2.8f), x(12f), y(2.8f))
+                    close()
+                }
+                drawPath(body, tint)
+                drawOval(
+                    cutout,
+                    topLeft = Offset(x(9f), y(10.5f)),
+                    size = Size(x(6f), y(8.6f))
+                )
+                drawCircle(cutout, radius = x(1.25f), center = Offset(x(9.9f), y(7.6f)))
+                drawCircle(cutout, radius = x(1.25f), center = Offset(x(14.1f), y(7.6f)))
+                val beak = Path().apply {
+                    moveTo(x(10.7f), y(9.4f)); lineTo(x(13.3f), y(9.4f))
+                    lineTo(x(12f), y(11f)); close()
+                }
+                drawPath(beak, cutout)
+            }
+        }
+    }
+}
+
+/**
+ * Android-app tab (spec screen-2): uppercase ~13sp BOLD dark text for
+ * every tab; selection is shown ONLY by a primary-green underline that
+ * spans the label's own width.
+ */
 @Composable
 private fun ListTab(label: String, selected: Boolean, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .clickable { onClick() }
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 10.dp, vertical = 6.dp)
+            .width(IntrinsicSize.Max),
+        horizontalAlignment = Alignment.Start
     ) {
         Text(
             label,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            color = if (selected) BrandTeal else MaterialTheme.colorScheme.onSurfaceVariant
+            style = TextStyle(
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.8.sp
+            ),
+            color = MaterialTheme.colorScheme.onSurface
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(5.dp))
         Box(
             modifier = Modifier
+                .fillMaxWidth()
                 .height(2.dp)
-                .width(30.dp)
-                .background(if (selected) BrandTeal else Color.Transparent)
+                .background(if (selected) BrandGreen else Color.Transparent)
         )
     }
 }
 
 /**
- * Profile-row proxy line, Android-app style (Play screenshot): flag +
- * lowercase descriptor, e.g. "🇫🇷 residential • host:port", "http • h:p".
+ * Profile-row descriptor, Android-app style (spec screen-2): flag +
+ * lowercase descriptor and NOTHING else — "🇺🇸 http", "geolocation".
+ * The descriptor is the proxy type (lowercase) when the profile has a
+ * proxy; profiles without one read "geolocation" (the matched field
+ * the real app shows). No host:port, no "No proxy" text.
  */
-private fun ProxyConfig.rowLabel(): String {
-    val where = if (host.isNotBlank() && port > 0) " • $host:$port" else ""
-    return when (mode) {
-        "devxyz" -> "${Countries.flag(buyCountry)} ${buyType.lowercase()}$where".trim()
-        "custom" -> if (isSet) "${type.lowercase()}$where" else "No proxy"
-        else -> "No proxy"
-    }
+private fun ProxyConfig.specDescriptor(): String = when (mode) {
+    "devxyz" -> "${Countries.flag(buyCountry)} ${type.lowercase()}".trim()
+    "custom" -> if (isSet) type.lowercase() else "geolocation"
+    else -> "geolocation"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -307,67 +458,84 @@ private fun ProfileRow(
         }
     }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(profile.name, style = MaterialTheme.typography.titleMedium)
-                        if (pinned) {
-                            Icon(
-                                Icons.Filled.PushPin, contentDescription = "Pinned",
-                                modifier = Modifier
-                                    .padding(start = 6.dp)
-                                    .size(14.dp),
-                                tint = BrandTeal
-                            )
-                        }
-                        TextButton(onClick = { showQuick = true }) {
-                            Text("Settings ›", color = BrandTeal)
-                        }
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        StateDot(
-                            when {
-                                launching -> "launching"
-                                running -> "running"
-                                else -> "ready"
-                            }
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            when {
-                                launching -> "downloading profile..."
-                                running -> "running"
-                                else -> "ready"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = when {
-                                launching -> StatusBlue
-                                running -> BrandTeal
-                                else -> MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-                        )
-                        Text(
-                            " • ${OsOptions.label(profile.os)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Text(
-                        profile.proxy.rowLabel(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    if (profile.tags.isNotEmpty()) {
-                        Text(
-                            profile.tags.joinToString("  ") { "#$it" },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = BrandTeal
-                        )
-                    }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    profile.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    profile.proxy.specDescriptor(),
+                    style = TextStyle(fontSize = 13.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (pinned) {
+                Icon(
+                    Icons.Filled.PushPin, contentDescription = "Pinned",
+                    modifier = Modifier.size(18.dp),
+                    tint = BrandGreen
+                )
+                Spacer(Modifier.width(8.dp))
+            }
+            OsGlyph(profile.os)
+            Spacer(Modifier.width(10.dp))
+            if (running) {
+                OutlinedButton(
+                    onClick = { onRunMode(profile, false) },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = BrandGreen),
+                    border = BorderStroke(1.dp, BrandGreen),
+                    modifier = Modifier.height(40.dp)
+                ) { Text("View") }
+                Spacer(Modifier.width(6.dp))
+                OutlinedButton(
+                    onClick = onStop,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = DangerRed),
+                    border = BorderStroke(1.dp, DangerRed),
+                    modifier = Modifier.height(40.dp)
+                ) {
+                    Icon(Icons.Filled.Stop, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Stop")
                 }
-                Box {
+            } else {
+                // Spec screen-2: Run is a SOLID green filled button,
+                // ~76x40dp, 8dp radius, white "Run", in the right cluster.
+                Button(
+                    onClick = { showRunChoice = true },
+                    enabled = !launching,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = BrandGreen,
+                        contentColor = Color.White
+                    ),
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                    modifier = Modifier
+                        .width(76.dp)
+                        .height(40.dp)
+                ) {
+                    Text(
+                        if (launching) "Starting…" else "Run",
+                        style = TextStyle(fontSize = if (launching) 13.sp else 15.sp),
+                        maxLines = 1
+                    )
+                }
+            }
+            Box {
                     IconButton(onClick = { menuOpen = true }) {
                         Icon(Icons.Filled.MoreVert, contentDescription = "Profile menu")
                     }
@@ -453,38 +621,6 @@ private fun ProfileRow(
                         )
                     }
                 }
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (running) {
-                    OutlinedButton(
-                        onClick = { onRunMode(profile, false) },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = BrandTeal),
-                        border = BorderStroke(1.dp, BrandTeal)
-                    ) { Text("View") }
-                    OutlinedButton(
-                        onClick = onStop,
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = DangerRed),
-                        border = BorderStroke(1.dp, DangerRed)
-                    ) {
-                        Icon(Icons.Filled.Stop, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Stop")
-                    }
-                } else {
-                    // GoLogin Android: Run is a SOLID green filled button.
-                    Button(
-                        onClick = { showRunChoice = true },
-                        enabled = !launching,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = BrandTeal,
-                            contentColor = Color.White
-                        )
-                    ) {
-                        Text(if (launching) "Starting…" else "Run")
-                    }
-                }
-            }
         }
     }
 
@@ -549,7 +685,7 @@ private fun RunChoiceRow(title: String, subtitle: String, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            Icons.Filled.PlayArrow, contentDescription = null, tint = BrandTeal,
+            Icons.Filled.PlayArrow, contentDescription = null, tint = BrandGreen,
             modifier = Modifier.size(22.dp)
         )
         Spacer(Modifier.width(12.dp))
@@ -610,9 +746,11 @@ private fun FolderPickerDialog(
 }
 
 /**
- * Quick-settings sheet — the Android echo of GoLogin's "Settings ›" drawer
- * (capture §5): header card, "Profile essentials" rows, collapsible
- * Storage / Hardware sections. Edits apply on Done.
+ * Quick-settings sheet — the Android echo of GoLogin's quick-settings
+ * drawer (capture §5), reached via the row's ⋮ → Cookies since v2.3.0
+ * removed the row's "Settings ›" button to match the real app: header
+ * card, "Profile essentials" rows, collapsible Storage / Hardware
+ * sections. Edits apply on Done.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -715,7 +853,7 @@ fun QuickSettingsSheet(
             EssentialRow("Folders") {
                 Column {
                     if (folders.isEmpty()) {
-                        Text("+ Add folder", color = BrandTeal)
+                        Text("+ Add folder", color = BrandGreen)
                     }
                     folders.forEach { folder ->
                         Row(
@@ -801,7 +939,7 @@ fun QuickSettingsSheet(
                         )
                     )
                     onDismiss()
-                }) { Text("↻ Refresh fingerprint", color = BrandTeal) }
+                }) { Text("↻ Refresh fingerprint", color = BrandGreen) }
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -832,14 +970,14 @@ fun QuickSettingsSheet(
                             ) {
                                 Text(
                                     if (checkingProxy) "Checking…" else "Check proxy",
-                                    color = BrandTeal
+                                    color = BrandGreen
                                 )
                             }
                             if (checkText != null) {
                                 Text(
                                     checkText!!,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = if (checkFailed) MaterialTheme.colorScheme.error else BrandTeal
+                                    color = if (checkFailed) MaterialTheme.colorScheme.error else BrandGreen
                                 )
                             }
                             if (apiToken == null) {

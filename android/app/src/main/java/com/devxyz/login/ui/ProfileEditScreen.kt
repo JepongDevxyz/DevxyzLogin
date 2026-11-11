@@ -3,15 +3,19 @@ package com.devxyz.login.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -37,11 +41,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,8 +60,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.devxyz.login.data.ApiResult
 import com.devxyz.login.data.ProfileStore
 import com.devxyz.login.data.ServerApi
@@ -71,16 +81,20 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.decodeFromJsonElement
 
 /**
- * Create/Edit profile — v3 layout follows the GoLogin ANDROID app
- * (Play screenshots): a "Create profile" screen of collapsible accordion
- * sections in the order Operating system → Proxy → Timezone → WebRTC →
- * Geolocation → Extensions → Bookmarks → Advanced → Cookies, with the
- * Profile Summary card under the name field and a full-width solid
- * "CREATE PROFILE" button. Section contents transcribe the web capture
- * (GOLOGIN_CAPTURE.md §4): Proxy is the default-expanded section (it is
- * the DEFAULT tab in the web editor), OS defaults to Linux and locks
- * after creation, and every option list comes from [CaptureData] /
- * [Countries] (capture-exact).
+ * Create/Edit profile — v2.3.0 visual rebuild against the REAL GoLogin
+ * ANDROID app (ANDROID_UI_SPEC.md, spec screen-0): back arrow (gray) +
+ * bold 20sp title; a plain white name field (thin border, 10dp radius,
+ * NO floating label, NO "Folder:" line, NO Profile Summary card — that
+ * card was a web-editor element); accordion bars (#F6F5F4, 10dp radius,
+ * ~56dp, bold 16sp labels, light-gray chevrons) in the order
+ * Operating system → Proxy → Timezone → WebRTC → Geolocation →
+ * Advanced → Extensions → Bookmarks → Cookies, ALL collapsed by
+ * default; fields in the label-above + white-box pattern (small gray
+ * label, white rounded box); and a bottom-PINNED solid-green 52dp
+ * "CREATE PROFILE" button (8dp radius, white uppercase label).
+ * Section contents and behaviour are unchanged from 2.2.0 (web capture
+ * GOLOGIN_CAPTURE.md §4 option lists via [CaptureData] / [Countries];
+ * OS defaults to Linux and locks after creation).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -166,13 +180,50 @@ fun ProfileEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isNew) "Create profile" else "Edit profile") },
+                title = {
+                    Text(
+                        if (isNew) "Create profile" else "Edit profile",
+                        style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.Filled.ArrowBack, contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
+        },
+        bottomBar = {
+            // Spec screen-0: the primary action is PINNED at the bottom
+            // over a white background — full-width solid-green 52dp
+            // button, 8dp radius, white uppercase letter-spaced label.
+            Surface(color = MaterialTheme.colorScheme.surface) {
+                Button(
+                    onClick = { save() },
+                    // Capture §4.2: Create Profile is disabled in Buy dedicated IP mode.
+                    enabled = !(profile.proxy.mode == "devxyz" && profile.proxy.dedicated),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .height(52.dp)
+                ) {
+                    Text(
+                        if (isNew) "CREATE PROFILE" else "SAVE PROFILE",
+                        style = TextStyle(
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        )
+                    )
+                }
+            }
         }
     ) { padding ->
         Column(
@@ -181,24 +232,20 @@ fun ProfileEditScreen(
                 .padding(padding)
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // ---------- Name / folder ----------
-            OutlinedTextField(
+            // ---------- Name (plain white box, no floating label; the
+            // "Folder:" line and the Profile Summary card were removed —
+            // both are web-editor elements absent from the real app) --
+            LabeledTextField(
+                label = null,
                 value = profile.name,
                 onValueChange = { profile = profile.copy(name = it) },
-                label = { Text("Profile Name") },
                 modifier = Modifier.fillMaxWidth(), singleLine = true
             )
-            val folderLabel = folders.filter { it.id in profile.folderIds }
-                .joinToString { it.name }.ifBlank { "No folder" }
-            Text("Folder: $folderLabel", style = MaterialTheme.typography.bodySmall)
-
-            // ---------- Profile Summary (capture §4.9) ----------
-            ProfileSummaryCard(profile, folders)
 
             // ---------- Operating system (web editor "Overview") ----------
-            AccordionSection("Operating system", initiallyExpanded = true) {
+            AccordionSection("Operating system") {
                 Text(
                     "Operating System${if (!isNew) " (locked after creation)" else ""}",
                     style = MaterialTheme.typography.bodySmall
@@ -247,26 +294,26 @@ fun ProfileEditScreen(
                         Text(folder.name)
                     }
                 }
-                OutlinedTextField(
+                LabeledTextField(
+                    label = "Tags (comma separated)",
                     value = profile.tags.joinToString(", "),
                     onValueChange = { text ->
                         profile = profile.copy(
                             tags = text.split(",").map { it.trim() }.filter { it.isNotEmpty() }
                         )
                     },
-                    label = { Text("Tags (comma separated)") },
                     modifier = Modifier.fillMaxWidth(), singleLine = true
                 )
-                OutlinedTextField(
+                LabeledTextField(
+                    label = "Notes",
                     value = profile.notes,
                     onValueChange = { profile = profile.copy(notes = it) },
-                    label = { Text("Notes") },
                     modifier = Modifier.fillMaxWidth(), minLines = 2
                 )
             }
 
-            // ---------- Proxy (GoLogin's default editor tab) ----------
-            AccordionSection("Proxy", initiallyExpanded = true) {
+            // ---------- Proxy ----------
+            AccordionSection("Proxy") {
                 Text("Connection type", style = MaterialTheme.typography.bodySmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     FilterChip(
@@ -333,7 +380,7 @@ fun ProfileEditScreen(
                                         "Just for you — no sharing",
                                         "Unlimited traffic"
                                     ).forEach { benefit ->
-                                        Text("✓ $benefit", color = BrandTeal)
+                                        Text("✓ $benefit", color = BrandGreen)
                                     }
                                     Spacer(Modifier.height(8.dp))
                                     Button(onClick = {
@@ -437,7 +484,7 @@ fun ProfileEditScreen(
                                 Text(
                                     checkText!!,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = if (checkFailed) MaterialTheme.colorScheme.error else BrandTeal
+                                    color = if (checkFailed) MaterialTheme.colorScheme.error else BrandGreen
                                 )
                             }
                             Text(
@@ -472,36 +519,36 @@ fun ProfileEditScreen(
                             onSelect = { profile = profile.copy(proxy = profile.proxy.copy(type = it)) }
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
+                            LabeledTextField(
+                                label = "IP Address",
                                 value = profile.proxy.host,
                                 onValueChange = { profile = profile.copy(proxy = profile.proxy.copy(host = it)) },
-                                label = { Text("IP Address") },
                                 modifier = Modifier.weight(1f), singleLine = true
                             )
-                            OutlinedTextField(
+                            LabeledTextField(
+                                label = "Port",
                                 value = if (profile.proxy.port == 0) "" else profile.proxy.port.toString(),
                                 onValueChange = { profile = profile.copy(proxy = profile.proxy.copy(port = it.toIntOrNull() ?: 0)) },
-                                label = { Text("Port") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.width(110.dp), singleLine = true
                             )
                         }
-                        OutlinedTextField(
+                        LabeledTextField(
+                            label = "Proxy Username",
                             value = profile.proxy.username,
                             onValueChange = { profile = profile.copy(proxy = profile.proxy.copy(username = it)) },
-                            label = { Text("Proxy Username") },
                             modifier = Modifier.fillMaxWidth(), singleLine = true
                         )
-                        OutlinedTextField(
+                        LabeledTextField(
+                            label = "Proxy Password",
                             value = profile.proxy.password,
                             onValueChange = { profile = profile.copy(proxy = profile.proxy.copy(password = it)) },
-                            label = { Text("Proxy Password") },
                             modifier = Modifier.fillMaxWidth(), singleLine = true
                         )
-                        OutlinedTextField(
+                        LabeledTextField(
+                            label = "Change IP URL for mobile proxy",
                             value = profile.proxy.changeIpUrl,
                             onValueChange = { profile = profile.copy(proxy = profile.proxy.copy(changeIpUrl = it)) },
-                            label = { Text("Change IP URL for mobile proxy") },
                             modifier = Modifier.fillMaxWidth(), singleLine = true
                         )
                         Text(
@@ -516,7 +563,7 @@ fun ProfileEditScreen(
                             Text(
                                 checkText!!,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (checkFailed) MaterialTheme.colorScheme.error else BrandTeal
+                                color = if (checkFailed) MaterialTheme.colorScheme.error else BrandGreen
                             )
                         }
                         if (apiToken == null) {
@@ -541,10 +588,10 @@ fun ProfileEditScreen(
                     profile = profile.copy(fingerprint = fp.copy(timezone = fp.timezone.copy(auto = on)))
                 }
                 if (!fp.timezone.auto) {
-                    OutlinedTextField(
+                    LabeledTextField(
+                        label = "Timezone (IANA, e.g. Asia/Manila)",
                         value = fp.timezone.zone,
                         onValueChange = { profile = profile.copy(fingerprint = fp.copy(timezone = fp.timezone.copy(zone = it))) },
-                        label = { Text("Timezone (IANA, e.g. Asia/Manila)") },
                         modifier = Modifier.fillMaxWidth(), singleLine = true
                     )
                 }
@@ -571,99 +618,59 @@ fun ProfileEditScreen(
             }
             if (!fp.geolocation.auto) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
+                    LabeledTextField(
+                        label = "Latitude",
                         value = fp.geolocation.lat.toString(),
                         onValueChange = { v -> profile = profile.copy(fingerprint = fp.copy(geolocation = fp.geolocation.copy(lat = v.toDoubleOrNull() ?: 0.0))) },
-                        label = { Text("Latitude") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f), singleLine = true
                     )
-                    OutlinedTextField(
+                    LabeledTextField(
+                        label = "Longitude",
                         value = fp.geolocation.lon.toString(),
                         onValueChange = { v -> profile = profile.copy(fingerprint = fp.copy(geolocation = fp.geolocation.copy(lon = v.toDoubleOrNull() ?: 0.0))) },
-                        label = { Text("Longitude") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f), singleLine = true
                     )
                 }
             }
-            }
-
-            // ---------- Extensions ----------
-            AccordionSection("Extensions") {
-            profile.extensions.forEachIndexed { index, ext ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(ext, modifier = Modifier.weight(1f))
-                    IconButton(onClick = {
-                        profile = profile.copy(extensions = profile.extensions.filterIndexed { i, _ -> i != index })
-                    }) { Icon(Icons.Filled.Delete, contentDescription = "Remove extension") }
-                }
-            }
-            var newExt by remember { mutableStateOf("") }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
-                    value = newExt,
-                    onValueChange = { newExt = it },
-                    label = { Text("Extension name / ID") },
-                    modifier = Modifier.weight(1f), singleLine = true
-                )
-                IconButton(onClick = {
-                    if (newExt.isNotBlank()) {
-                        profile = profile.copy(extensions = profile.extensions + newExt.trim())
-                        newExt = ""
-                    }
-                }) { Icon(Icons.Filled.Add, contentDescription = "Add extension") }
-            }
-            OutlinedButton(onClick = {
-                if (newExt.isNotBlank()) {
-                    profile = profile.copy(extensions = profile.extensions + newExt.trim())
-                    newExt = ""
-                }
-            }) { Text("Add extensions") }
-            Text(
-                "Note: WebView cannot install Chromium extensions; this list is stored with the profile (GoLogin parity) for the future engine.",
-                style = MaterialTheme.typography.bodySmall
-            )
-            }
-
-            // ---------- Bookmarks ----------
-            AccordionSection("Bookmarks") {
-            var bookmarksText by remember {
-                mutableStateOf(
-                    profile.bookmarks.joinToString("\n").ifBlank {
-                        if (isNew) DefaultBookmarks.editorText else ""
-                    }
-                )
-            }
-            OutlinedTextField(
-                value = bookmarksText,
-                onValueChange = {
-                    bookmarksText = it
-                    profile = profile.copy(
-                        bookmarks = it.lines().map { l -> l.trimEnd() }
-                            .filter { l -> l.isNotBlank() }
-                    )
-                },
-                label = { Text("Edit Bookmarks — one per line: folder::name::url") },
-                modifier = Modifier.fillMaxWidth(), minLines = 6
-            )
             }
 
             // ---------- Advanced: Navigator ----------
             AccordionSection("Advanced") {
             SectionTitle("Navigator")
-            // Play screenshot: the UA field carries a copy icon at its right.
-            Row(verticalAlignment = Alignment.Top) {
+            // Spec screen-0 (Advanced expanded): small gray "User-agent"
+            // label ABOVE a white rounded box, GREEN copy icon at the
+            // box's right edge.
+            FieldLabel("User-agent")
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp)
+            ) {
                 OutlinedTextField(
                     value = nav.userAgent,
                     onValueChange = { profile = profile.copy(fingerprint = fp.copy(navigator = nav.copy(userAgent = it))) },
-                    label = { Text("User-Agent") },
-                    modifier = Modifier.weight(1f), minLines = 2
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = fieldBoxColors(),
+                    contentPadding = PaddingValues(
+                        start = 12.dp, end = 48.dp, top = 12.dp, bottom = 12.dp
+                    )
                 )
-                IconButton(onClick = {
-                    clipboard.setText(AnnotatedString(nav.userAgent))
-                    android.widget.Toast.makeText(context, "User-Agent copied", android.widget.Toast.LENGTH_SHORT).show()
-                }) { Icon(Icons.Filled.ContentCopy, contentDescription = "Copy User-Agent") }
+                IconButton(
+                    onClick = {
+                        clipboard.setText(AnnotatedString(nav.userAgent))
+                        android.widget.Toast.makeText(context, "User-Agent copied", android.widget.Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Icon(
+                        Icons.Filled.ContentCopy, contentDescription = "Copy User-Agent",
+                        tint = BrandGreen, modifier = Modifier.size(20.dp)
+                    )
+                }
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -703,16 +710,17 @@ fun ProfileEditScreen(
             if (nav.languagesAuto) {
                 // Capture §4.7: with "Based on IP" ON the Languages box reads
                 // "Automatic" and is disabled.
-                OutlinedTextField(
+                LabeledTextField(
+                    label = "Languages",
                     value = "Automatic",
                     onValueChange = {},
                     readOnly = true,
                     enabled = false,
-                    label = { Text("Languages") },
                     modifier = Modifier.fillMaxWidth(), singleLine = true
                 )
             } else {
-                OutlinedTextField(
+                LabeledTextField(
+                    label = "Languages (comma separated)",
                     value = nav.languages.joinToString(", "),
                     onValueChange = { text ->
                         profile = profile.copy(
@@ -723,17 +731,16 @@ fun ProfileEditScreen(
                             )
                         )
                     },
-                    label = { Text("Languages (comma separated)") },
                     modifier = Modifier.fillMaxWidth(), singleLine = true
                 )
             }
             SwitchRow("Based on IP", nav.languagesAuto) { on ->
                 profile = profile.copy(fingerprint = fp.copy(navigator = nav.copy(languagesAuto = on)))
             }
-            OutlinedTextField(
+            LabeledTextField(
+                label = "Platform",
                 value = nav.platform,
                 onValueChange = { profile = profile.copy(fingerprint = fp.copy(navigator = nav.copy(platform = it))) },
-                label = { Text("Platform") },
                 modifier = Modifier.fillMaxWidth(), singleLine = true
             )
             DropdownField(
@@ -873,7 +880,8 @@ fun ProfileEditScreen(
                 var pagesText by remember {
                     mutableStateOf(profile.browser.startPages.joinToString("\n"))
                 }
-                OutlinedTextField(
+                LabeledTextField(
+                    label = "Specified pages (one URL per line)",
                     value = pagesText,
                     onValueChange = {
                         pagesText = it
@@ -883,26 +891,85 @@ fun ProfileEditScreen(
                             )
                         )
                     },
-                    label = { Text("Specified pages (one URL per line)") },
                     modifier = Modifier.fillMaxWidth(), minLines = 2
                 )
             }
-            OutlinedTextField(
+            LabeledTextField(
+                label = "Launch arguments",
                 value = browser.launchArguments,
                 onValueChange = { profile = profile.copy(browser = browser.copy(launchArguments = it)) },
-                label = { Text("Launch arguments") },
-                placeholder = { Text("Example: --disable-gpu --start-maximized") },
+                placeholder = "Example: --disable-gpu --start-maximized",
                 modifier = Modifier.fillMaxWidth(), minLines = 2
             )
-            OutlinedTextField(
+            LabeledTextField(
+                label = "Custom DNS",
                 value = browser.customDns,
                 onValueChange = { profile = profile.copy(browser = browser.copy(customDns = it)) },
-                label = { Text("Custom DNS") },
                 modifier = Modifier.fillMaxWidth(), singleLine = true
             )
 
             }
             // ---------- end Advanced accordion ----------
+
+            // ---------- Extensions ----------
+            AccordionSection("Extensions") {
+            profile.extensions.forEachIndexed { index, ext ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(ext, modifier = Modifier.weight(1f))
+                    IconButton(onClick = {
+                        profile = profile.copy(extensions = profile.extensions.filterIndexed { i, _ -> i != index })
+                    }) { Icon(Icons.Filled.Delete, contentDescription = "Remove extension") }
+                }
+            }
+            var newExt by remember { mutableStateOf("") }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LabeledTextField(
+                    label = "Extension name / ID",
+                    value = newExt,
+                    onValueChange = { newExt = it },
+                    modifier = Modifier.weight(1f), singleLine = true
+                )
+                IconButton(onClick = {
+                    if (newExt.isNotBlank()) {
+                        profile = profile.copy(extensions = profile.extensions + newExt.trim())
+                        newExt = ""
+                    }
+                }) { Icon(Icons.Filled.Add, contentDescription = "Add extension") }
+            }
+            OutlinedButton(onClick = {
+                if (newExt.isNotBlank()) {
+                    profile = profile.copy(extensions = profile.extensions + newExt.trim())
+                    newExt = ""
+                }
+            }) { Text("Add extensions") }
+            Text(
+                "Note: WebView cannot install Chromium extensions; this list is stored with the profile (GoLogin parity) for the future engine.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            }
+
+            // ---------- Bookmarks ----------
+            AccordionSection("Bookmarks") {
+            var bookmarksText by remember {
+                mutableStateOf(
+                    profile.bookmarks.joinToString("\n").ifBlank {
+                        if (isNew) DefaultBookmarks.editorText else ""
+                    }
+                )
+            }
+            LabeledTextField(
+                label = "Edit Bookmarks — one per line: folder::name::url",
+                value = bookmarksText,
+                onValueChange = {
+                    bookmarksText = it
+                    profile = profile.copy(
+                        bookmarks = it.lines().map { l -> l.trimEnd() }
+                            .filter { l -> l.isNotBlank() }
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(), minLines = 6
+            )
+            }
 
             // ---------- Cookies ----------
             AccordionSection("Cookies") {
@@ -918,16 +985,6 @@ fun ProfileEditScreen(
             }
 
             Spacer(Modifier.height(8.dp))
-            Button(
-                onClick = { save() },
-                // Capture §4.2: Create Profile is disabled in Buy dedicated IP mode.
-                enabled = !(profile.proxy.mode == "devxyz" && profile.proxy.dedicated),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                // GoLogin Android button label (Play screenshot): CREATE PROFILE.
-                Text(if (isNew) "CREATE PROFILE" else "Save profile")
-            }
-            Spacer(Modifier.height(24.dp))
         }
     }
 
@@ -937,9 +994,9 @@ fun ProfileEditScreen(
             onDismissRequest = { showCookiesImport = false },
             title = { Text("Import Cookies") },
             text = {
-                OutlinedTextField(
+                LabeledTextField(
+                    label = "Paste cookies (JSON or name=value lines)",
                     value = text, onValueChange = { text = it },
-                    label = { Text("Paste cookies (JSON or name=value lines)") },
                     minLines = 5
                 )
             },
@@ -954,81 +1011,93 @@ fun ProfileEditScreen(
     }
 }
 
-/** Profile Summary card (capture §4.9 rows). */
-@Composable
-private fun ProfileSummaryCard(profile: Profile, folders: List<Folder>) {
-    val fp = profile.fingerprint
-    val nav = fp.navigator
-    val hw = fp.hardware
-    val rows = listOf(
-        "Profile name" to profile.name,
-        "Folder" to folders.filter { it.id in profile.folderIds }
-            .joinToString { it.name }.ifBlank { "No folder" },
-        "Proxy" to when (profile.proxy.mode) {
-            "devxyz" -> "DevxyzLogin"
-            "custom" -> profile.proxy.type
-            else -> "none"
-        },
-        "Languages" to nav.languages.joinToString(" "),
-        "Timezone" to if (fp.timezone.auto) "Based on IP" else fp.timezone.zone,
-        "Geolocation" to if (fp.geolocation.auto) "Based on IP" else fp.geolocation.mode,
-        "WebGL Info" to if (hw.webglMetadataMask) "Masked" else "Real",
-        "Media Devices" to "Masked",
-        "Canvas" to when (hw.canvasMode) {
-            "noise" -> "Masked with noise"
-            "block" -> "Blocked"
-            else -> "off"
-        },
-        "Client Rects" to if (hw.clientRectsNoise) "noise" else "off",
-        "WebGL Metadata" to if (hw.webglMetadataMask) "mask" else "real",
-        "WebGL Image" to if (hw.webglNoise) "Masked with noise" else "off",
-        "Audio Context" to if (hw.audioNoise) "Masked with noise" else "off",
-        "Fonts" to if (fp.fontsMasking) "Masked" else "Real",
-        "UA" to "Chrome ${nav.browserVersion.substringBefore(".")}",
-        "Resolution" to nav.screenResolution,
-        "OS" to OsOptions.label(profile.os),
-        "Browser" to "Orbita",
-        "Platform" to nav.platform,
-        "Media devices" to "(${fp.mediaDevices.videoInputs}|${fp.mediaDevices.audioInputs}|${fp.mediaDevices.audioOutputs})",
-        "Local Storage" to profile.browser.localStorage.toString(),
-        "Ext. Storage" to profile.browser.extensionStorage.toString(),
-        "Plugins" to profile.browser.vulnerablePlugins.toString(),
-        "User-Agent" to nav.userAgent
-    )
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text("Profile Summary", style = MaterialTheme.typography.titleSmall)
-            Spacer(Modifier.height(6.dp))
-            rows.forEach { (label, value) ->
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        label,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.width(110.dp)
-                    )
-                    Text(value, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        }
-    }
-}
-
 @Composable
 fun SectionTitle(text: String) {
+    // Spec screen-0: sub-headers inside an expanded accordion
+    // ("Navigator") are bold, ~15sp.
     Text(
-        text, style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(top = 10.dp, bottom = 2.dp)
+        text,
+        style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold),
+        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
     )
 }
 
 /**
- * Collapsible editor section — the GoLogin Android "Create profile"
- * screen is a stack of these accordions (Play screenshots 1-2), each
- * with a chevron header.
+ * Small gray field label rendered ABOVE its field — the field pattern
+ * of the real GoLogin Android editor (spec screen-0: "User-agent",
+ * "Screen resolution"). Replaces M3 floating labels in the editor.
+ */
+@Composable
+fun FieldLabel(text: String) {
+    Text(
+        text,
+        style = TextStyle(fontSize = 12.sp),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(bottom = 4.dp)
+    )
+}
+
+/**
+ * Colors for the editor's white-box fields: surface-colored fill (white
+ * in light mode), thin light border, primary-green focus border, 10dp
+ * radius is set at each field's `shape`.
+ */
+@Composable
+fun fieldBoxColors() = OutlinedTextFieldDefaults.colors(
+    focusedContainerColor = MaterialTheme.colorScheme.surface,
+    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+    disabledContainerColor = MaterialTheme.colorScheme.surface,
+    errorContainerColor = MaterialTheme.colorScheme.surface,
+    focusedBorderColor = BrandGreen,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+    disabledBorderColor = MaterialTheme.colorScheme.outline
+)
+
+/**
+ * Label-above text field in the real app's editor pattern: small gray
+ * [label] above a white rounded (10dp) box — no floating label. A null
+ * [label] renders the box alone (the profile name field, spec screen-0).
+ * The block carries a 10dp bottom gap so stacked fields breathe.
+ */
+@Composable
+fun LabeledTextField(
+    label: String?,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    singleLine: Boolean = false,
+    minLines: Int = 1,
+    readOnly: Boolean = false,
+    enabled: Boolean = true,
+    placeholder: String? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    trailingIcon: @Composable (() -> Unit)? = null
+) {
+    Column(modifier = modifier.padding(bottom = 10.dp)) {
+        if (label != null) FieldLabel(label)
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = singleLine,
+            minLines = minLines,
+            readOnly = readOnly,
+            enabled = enabled,
+            placeholder = placeholder?.let { text -> @Composable { Text(text) } },
+            keyboardOptions = keyboardOptions,
+            trailingIcon = trailingIcon,
+            shape = RoundedCornerShape(10.dp),
+            colors = fieldBoxColors()
+        )
+    }
+}
+
+/**
+ * Collapsible editor section — the real GoLogin Android "Create
+ * profile" screen is a stack of these accordions (spec screen-0):
+ * light bar (#F6F5F4 via surfaceVariant), ~10dp radius, ~56dp tall,
+ * bold 16sp label, light-gray chevron; expanded content renders inside
+ * the same card.
  */
 @Composable
 fun AccordionSection(
@@ -1037,23 +1106,30 @@ fun AccordionSection(
     content: @Composable () -> Unit
 ) {
     var expanded by remember { mutableStateOf(initiallyExpanded) }
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
         Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { expanded = !expanded }
-                    .padding(vertical = 10.dp)
+                    .padding(vertical = 13.dp)
             ) {
                 Text(
                     title,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold),
                     modifier = Modifier.weight(1f)
                 )
                 Icon(
                     if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                    contentDescription = if (expanded) "Collapse section" else "Expand section"
+                    contentDescription = if (expanded) "Collapse section" else "Expand section",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             if (expanded) {
@@ -1135,21 +1211,25 @@ fun DropdownField(
 ) {
     var expanded by remember { mutableStateOf(false) }
     val display = options.firstOrNull { it.first == value }?.second ?: value
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-        OutlinedTextField(
-            value = display,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(label) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.fillMaxWidth().menuAnchor()
-        )
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { (v, text) ->
-                DropdownMenuItem(
-                    text = { Text(text) },
-                    onClick = { expanded = false; onSelect(v) }
-                )
+    Column(modifier = Modifier.padding(bottom = 10.dp)) {
+        FieldLabel(label)
+        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+            OutlinedTextField(
+                value = display,
+                onValueChange = {},
+                readOnly = true,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                shape = RoundedCornerShape(10.dp),
+                colors = fieldBoxColors()
+            )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                options.forEach { (v, text) ->
+                    DropdownMenuItem(
+                        text = { Text(text) },
+                        onClick = { expanded = false; onSelect(v) }
+                    )
+                }
             }
         }
     }
