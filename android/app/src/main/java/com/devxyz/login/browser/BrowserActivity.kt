@@ -382,10 +382,11 @@ abstract class BrowserActivityBase(private val slot: Int) : ComponentActivity() 
                 // Detect main-frame proxy failures and let BrowserContent
                 // show our own error state (with a proxy-free escape).
                 if (request?.isForMainFrame == true) {
+                    // WebViewClient has no proxy-connection errorCode (the
+                    // proxy-auth constant is a different failure); the
+                    // Chromium net error string is the reliable signal.
                     val desc = error?.description?.toString().orEmpty()
-                    if (error?.errorCode == WebViewClient.ERROR_PROXY_CONNECTION ||
-                        desc.contains("ERR_PROXY")
-                    ) {
+                    if (desc.contains("ERR_PROXY")) {
                         proxyError = true
                     }
                 }
